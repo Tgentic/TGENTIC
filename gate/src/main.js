@@ -3,6 +3,8 @@ import { getAddress, isAddress } from "viem";
 import { makeClients } from "./core.js";
 import { createServer } from "./server.js";
 
+try { process.loadEnvFile(".env"); } catch {} // optional .env in the gate dir; missing values get a clear error below
+
 const env = process.env;
 const need = (k) => { if (!env[k]) { console.error(`Missing ${k} in .env (see .env.example).`); process.exit(1); } return env[k]; };
 

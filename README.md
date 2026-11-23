@@ -50,14 +50,16 @@ agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/
 web/              landing + dapp (React, viem, Privy login)
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
-test/             contract tests (11) + gate tests (10)
+test/             contract tests (11) + gate tests (11)
 ```
 
 ## Quickstart
 
+Needs Node.js 20 or later.
+
 ```bash
 npm install
-npx hardhat test            # 21 tests: contract + gate on a local Hardhat network
+npm test                    # 22 tests: contract + gate on a local Hardhat network
 ```
 
 Run the dapp against a local node:
@@ -85,6 +87,8 @@ npm start               # :4021 — GET /hash?text=… costs 0.01 USDG
 ```
 
 ## Deploy
+
+Deploying needs a `DEPLOYER_PRIVATE_KEY` — see the root `.env.example`.
 
 ```bash
 # mainnet (Robinhood Chain 4663)

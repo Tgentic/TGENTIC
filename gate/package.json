@@ -1,17 +1,18 @@
 {
   "name": "tgentic-gate",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Receipt verifier gate for TGENTIC — checks USDG transfers on chain, payer signature, then tallies.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --env-file=.env src/main.js"
+    "test": "cd .. && npx hardhat test test/gate.js",
+    "start": "node src/main.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Tgentic",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "viem": "^2.58.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

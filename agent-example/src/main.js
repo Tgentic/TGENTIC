@@ -1,6 +1,8 @@
 import { isAddress } from "viem";
 import { createApp } from "./app.js";
 
+try { process.loadEnvFile(".env"); } catch {} // optional .env in this dir; missing values get a clear error below
+
 const env = process.env;
 const need = (k) => { if (!env[k]) { console.error(`Missing ${k} in .env (see .env.example).`); process.exit(1); } return env[k]; };
 
