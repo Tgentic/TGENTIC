@@ -109,13 +109,13 @@ The deploy scripts write `deployments/<chainId>.json`, `web/.env`, and `gate/.en
 Ten steps, one at a time, each closing a declared limit or opening the framework to someone new — see [ROADMAP.md](ROADMAP.md):
 
 1. **Foundation** — shipped (v1.0.1)
-2. **Decentralized trust** — multisig gate, multiple verifiers, evidence-based slashing
-3. **Manipulation resistance** — wash-trading detection, gate rate limiting, dapp flags
+2. **Decentralized trust** — state/policy contract split, multisig verifiers, evidence-based slashing
+3. **Manipulation resistance** — wash-trading detection, application-layer rate limiting, dapp flags
 4. **Integration** — TypeScript/Python SDKs, ERC-8004 registry, agent directory
 5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
 6. **Agent identity** — signed agent manifests, identity-to-score resolution, key rotation
-7. **Reputation consumption** — marketplace APIs, hiring flow, reputation-weighted pricing
-8. **Portable receipts** — payer-signed receipt format, off-chain verification, selective disclosure
+7. **Reputation consumption** — marketplace APIs, hiring flow, viewing-key access, pricing signals
+8. **Portable receipts** — private-by-choice payers, commitment tree + nullifiers, Noir proofs, batched verification
 9. **Disputes & governance** — slash disputes, appeals, community verifier governance
 10. **The standard** — trust-registry interop, agent-to-agent trust negotiation, standards track
 

@@ -21,20 +21,23 @@ verifiable receipt. *Shipped.*
 
 ## Step 2 — Decentralized trust
 
-The single gate key is the biggest declared limit. It goes away here.
+The single gate key is the biggest declared limit. It goes away here —
+and the contract splits so that changing who is trusted never touches
+what is counted.
 
+- [ ] State/policy split: a state layer (receipts, tallies, trees — permanent rules) separated from a policy layer (who may record and slash)
 - [ ] Multisig gate: `tally()` and `slash()` behind an m-of-n signer set
 - [ ] Multiple independent verifiers may submit receipts (same anti-replay rules)
 - [ ] Slash requires published evidence (tx hashes, pattern description) before execution
-- [ ] Gate rotation without redeploying the contract
+- [ ] Verifier-set rotation without redeploying the state layer
 
-**Done means:** no single key can decide what counts, and the contract's
-trust assumptions are documented and testable.
+**Done means:** no single key can decide what counts, and policy can
+change without touching state.
 
 ## Step 3 — Manipulation resistance
 
 - [ ] Automated wash-trading detection: payer concentration, timing patterns, amount cycling
-- [ ] Rate limiting and request budgets on the gate
+- [ ] Application-layer rate limiting and request budgets — the chain sequences first-come-first-served, so there is no fee market to lean on
 - [ ] Heuristic flags surfaced in the dapp (unique-payer ratio is step zero; expand it)
 - [ ] Research: time-weighted scoring / reputation decay — design note before code
 
@@ -53,10 +56,10 @@ afternoon without reading the contract.
 
 ## Step 5 — Assurance & scale
 
-- [ ] External security review of the contract and gate
+- [ ] External security review of the contract and gate — shortlist the firms that have already reviewed comparable privacy and reputation systems
 - [ ] USD-denominated `minBond` via an oracle — slash stakes should not silently deflate with token prices
 - [ ] Multi-chain receipt verification: same anti-replay rules on any chain the facilitators settle on
-- [ ] Gas and storage profiling for high-receipt agents
+- [ ] Gas and storage profiling, including the on-chain cost of proof verification
 
 **Done means:** the system has been reviewed by someone we did not write
 ourselves, and it stays honest at scale.
@@ -76,6 +79,7 @@ A score is only useful if it binds to the agent you are actually talking to.
 
 - [ ] Marketplace APIs: filter and rank agents by counted score
 - [ ] Hiring flow reference: agree → pay (x402) → rate → tally, as one client integration
+- [ ] View-only receipt access: payers delegate read access to marketplaces and auditors with viewing keys — never spending power
 - [ ] Reputation-weighted pricing signals for x402 endpoints
 - [ ] Webhooks / event streams for score changes
 
@@ -84,18 +88,26 @@ your stack reacts to.
 
 ## Step 8 — Portable receipts
 
-- [ ] Payer-signed receipt format: verifiable off chain, no RPC required
-- [ ] Receipt proofs for third-party display (portfolio of completed work)
-- [ ] Research: selective disclosure — prove the receipt exists without revealing the payer
-- [ ] Cross-gate receipt verification (receipts from any conforming verifier)
+Public by default, private by choice. The receipt stays provable; the
+payer can stay hidden — without breaking what the tally counts.
 
-**Done means:** an agent can carry its work history anywhere.
+- [ ] Receipt commitments in an incremental Merkle tree, with nullifiers designed so unique-payer counting survives (same payer, same agent → same nullifier)
+- [ ] Hybrid flow: public receipts stay as they are; a payer may opt a receipt into the private set
+- [ ] Proof stack: Noir + Barretenberg — MIT/Apache-licensed, universal SRS, no per-circuit trusted setup
+- [ ] Batched proofs: one on-chain verification for many receipts (a single verification is 6–8× a Groth16 check, so receipts amortize)
+- [ ] Relayer for private receipts, so the fee payer is not revealed
+- [ ] Off-chain verification for portable receipt display — no RPC required
+- [ ] Research: selective disclosure beyond the payer (prove a receipt exists without revealing the amount)
+
+**Done means:** an agent can carry its work history anywhere, and a payer
+can stay private without weakening the tally.
 
 ## Step 9 — Disputes & governance
 
 - [ ] Slash disputes: evidence window before a slash becomes final
 - [ ] Appeals process with published outcomes
 - [ ] Community governance over the verifier set
+- [ ] Viewing-key access for dispute auditors — read the evidence, control nothing
 - [ ] Slash insurance research (bond-backed)
 
 **Done means:** being slashed is a process with due diligence, not a
