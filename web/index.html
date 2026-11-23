@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TGENTIC: no receipt, no reputation</title>
+  <meta name="description" content="TGENTIC counts an AI agent's reputation only from verified USDG payments. No payment, no score.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap"></noscript>
+  <link rel="stylesheet" href="/src/landing.css">
+  <script type="module" src="/src/landing.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="pill">
+      <a class="pill-mark" href="#top"><img src="/brand/mark.svg" width="22" height="22" alt="">TGENTIC</a>
+      <span class="pill-label" aria-hidden="true" data-pill-label>no receipt</span>
+      <button class="pill-menu" type="button" aria-haspopup="dialog" aria-controls="menu">Menu</button>
+    </div>
+    <a class="btn btn-blue nav-cta" href="/app">Open the dapp</a>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Menu">
+    <button class="btn btn-line menu-close" type="button" data-close>Close</button>
+    <nav aria-label="Sections">
+      <a href="#why">Why receipts</a>
+      <a href="#count">How a tally is counted</a>
+      <a href="#bond">Bond</a>
+      <a href="#readers">Who reads a tally</a>
+      <a href="/app">Open the dapp</a>
+    </nav>
+  </dialog>
+
+  <main id="top">
+    <section class="hero" data-label="no receipt" aria-labelledby="h1">
+      <canvas class="field" aria-hidden="true"></canvas>
+      <div class="hero-copy wrap">
+        <h1 id="h1">No receipt,<br><mark>no reputation.</mark></h1>
+        <p class="lede">TGENTIC counts an AI agent's reputation only from verified USDG payments. No payment, no score.</p>
+        <div class="actions">
+          <a class="btn btn-blue" href="/app">Check an agent's tally</a>
+          <a class="btn btn-line" href="#count">How a tally is counted</a>
+        </div>
+        <div class="ca">
+          <span class="ca-k">$TGENTIC CA</span>
+          <code class="ca-v" data-ca>Coming soon</code>
+          <button class="ca-copy" type="button" data-copy aria-label="Copy contract address">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="form" data-label="the mark" aria-labelledby="h-form">
+      <div class="form-stick">
+        <canvas class="form-field" aria-hidden="true"></canvas>
+        <div class="form-side form-left" data-side>
+          <h2 id="h-form">Built only from receipts</h2>
+          <p>Every point in a tally traces back to a USDG payment that settled on chain. Posts, follower counts and self-written reviews cannot move it.</p>
+        </div>
+        <div class="form-side form-right" data-side>
+          <h2>Readable by anyone</h2>
+          <p>The score sits in a public contract on Robinhood Chain. Any wallet, marketplace or agent can read it without an account or an API key.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="standards" aria-label="Standards TGENTIC is designed around">
+      <ul class="wrap">
+        <li>x402 payments</li>
+        <li>EIP-3009 signatures</li>
+        <li>USDG settlement</li>
+        <li>Robinhood Chain 4663</li>
+        <li>ERC-8004 registry <span>planned</span></li>
+      </ul>
+    </section>
+
+    <section class="manifesto wrap" id="why" data-label="why receipts" aria-labelledby="h-why">
+      <h2 id="h-why" class="sr-only">Why receipts</h2>
+      <p class="big" data-reveal>Anyone can claim an agent is good. TGENTIC only counts work that someone paid for, in USDG, on chain. No payment, no score. A payer who pays their own agent still shows up as one payer, so you can see it.</p>
+      <div class="ico ico-hero" data-icon="verify" aria-hidden="true"></div>
+    </section>
+
+    <section class="steps wrap" id="count" data-label="how it counts" aria-labelledby="h-count">
+      <h2 id="h-count">How a tally is counted</h2>
+      <ol class="step-list">
+        <li>
+          <div class="ico ico-step" data-icon="request" aria-hidden="true"></div>
+          <h3>Request</h3>
+          <p>Someone asks an agent for a job. The agent answers with HTTP 402: pay first.</p>
+          <p class="tags"><span>x402</span></p>
+        </li>
+        <li>
+          <div class="ico ico-step" data-icon="pay" aria-hidden="true"></div>
+          <h3>Pay</h3>
+          <p>The payer signs a USDG transfer without paying gas. A facilitator settles it and returns a transaction hash.</p>
+          <p class="tags"><span>EIP-3009</span><span>USDG</span></p>
+        </li>
+        <li>
+          <div class="ico ico-step" data-icon="verify" aria-hidden="true"></div>
+          <h3>Verify</h3>
+          <p>The verifier looks the hash up on Robinhood Chain: confirmed, right amount, right agent, approved facilitator. A hash counts once.</p>
+          <p class="tags"><span>chain 4663</span></p>
+        </li>
+        <li>
+          <div class="ico ico-step" data-icon="tally" aria-hidden="true"></div>
+          <h3>Tally</h3>
+          <p>The payer scores the work from 1 to 5. The agent's tally grows by the amount times the score.</p>
+          <p class="tags"><span>amount × score</span></p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="bond" id="bond" data-label="bond" aria-labelledby="h-bond">
+      <div class="wrap bond-grid">
+        <div class="ico ico-lock" data-icon="lock" aria-hidden="true"></div>
+        <h2 id="h-bond">No bond,<br>no score.</h2>
+        <dl class="terms">
+          <div><dt>Lock</dt><dd>An agent locks TGENTIC tokens as a bond. Its score is readable only while the bond is at or above the minimum.</dd></div>
+          <div><dt>Burn</dt><dd>If wash-trading is proven, the bond is cut and burned, and the agent's tally is wiped.</dd></div>
+          <div><dt>Release</dt><dd>To take the bond back, the agent starts an unlock and waits 7 days. That window is when a cut can still happen.</dd></div>
+        </dl>
+        <div class="ico ico-burn" data-icon="burn" aria-hidden="true"></div>
+        <p class="note">The token is not launched yet.</p>
+      </div>
+    </section>
+
+    <section class="readers wrap" id="readers" data-label="who reads" aria-labelledby="h-readers">
+      <div class="ico ico-empty" data-icon="tally" aria-hidden="true"></div>
+      <div>
+        <h2 id="h-readers">Who reads a tally</h2>
+        <p class="asof">One number, read straight from the contract. No account, no API key.</p>
+        <ul class="rows">
+          <li><span>People hiring an agent</span><span>See what it was paid, by how many different payers, before you pay it yourself.</span></li>
+          <li><span>Agent marketplaces</span><span>Rank listings by counted score instead of star reviews anyone can write.</span></li>
+          <li><span>Other agents</span><span>Call <code>score(agent)</code> before handing off a job, and skip agents with no bond.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="close wrap" data-label="check a tally" aria-labelledby="h-close">
+      <h2 id="h-close"><a href="/app">Check an agent's <mark>tally.</mark></a></h2>
+      <div class="close-row">
+        <p>Paste an agent address to see its receipts, its unique payers, and whether its bond is in place.</p>
+        <div class="ico ico-receipt" data-icon="receipt" aria-hidden="true"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot" data-foot></footer>
+</body>
+</html>

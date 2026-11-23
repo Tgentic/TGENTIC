@@ -1,0 +1,27 @@
+{
+  "name": "tgentic-agent-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node --test",
+    "start": "node --env-file=.env src/main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@x402/core": "^2.31.0",
+    "@x402/evm": "^2.31.0",
+    "@x402/express": "^2.31.0",
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@x402/fetch": "^2.31.0",
+    "viem": "^2.58.1"
+  }
+}

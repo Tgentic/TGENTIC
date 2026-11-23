@@ -1,0 +1,90 @@
+/* TGENTIC v2: shared tokens and components (landing + dapp). Contrast verified, see design-system/MASTER.md */
+:root {
+  --void: #05070d;
+  --panel: #0c111c;
+  --text: #e8ebf2;
+  --mute: #9aa3b5;
+  --blue: #1f5bff;      /* blocks: primary buttons, highlights; white on it 5.25:1, vs background 3.84:1 */
+  --blue-text: #72a2ff; /* text, links, accents on dark background: 7.99:1 */
+  --edge: #5a6478;   /* control borders, 3.38:1 */
+  --hair: #2a3346;   /* decorative lines only */
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --gutter: clamp(16px, 5vw, 72px);
+  --ease: cubic-bezier(.76, 0, .24, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--void); color: var(--text); font: 400 1.0625rem/1.6 var(--serif); font-optical-sizing: auto; }
+img, svg, canvas { display: block; max-width: 100%; }
+h1, h2, h3 { margin: 0; font-weight: 400; line-height: .95; letter-spacing: -.01em; }
+p { margin: 0 0 1em; }
+a { color: inherit; }
+a, button, summary, label[for], [role="button"] { cursor: pointer; }
+button:disabled, input:disabled { cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--blue-text); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* blue block highlight behind a phrase; the clone keeps the block intact across line breaks */
+mark { color: #fff; background: linear-gradient(var(--blue), var(--blue)) 0 .12em / 100% .92em no-repeat; -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 .08em; }
+
+.wrap { width: min(1240px, 100% - 2 * var(--gutter)); margin-inline: auto; }
+
+/* buttons: square corners, 1px borders, hover/active/disabled states differ in shape, not just color */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border: 1px solid transparent; border-radius: 0; font: 600 1rem/1 var(--serif); text-decoration: none; transition: background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease); }
+.btn-blue { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn-blue:hover { background: var(--text); color: var(--void); border-color: var(--text); }
+.btn-line { border-color: var(--edge); color: var(--text); background: transparent; }
+.btn-line:hover { border-color: var(--blue-text); color: var(--blue-text); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; }
+
+/* floating nav pill */
+.nav { position: fixed; z-index: 20; top: 14px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; }
+.pill { pointer-events: auto; display: flex; align-items: center; gap: 18px; height: 48px; padding: 0 6px 0 14px; background: var(--void); border: 1px solid var(--hair); }
+.pill-mark { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 1.05rem; min-height: 44px; }
+.pill-label { font: 400 .8rem/1 var(--mono); color: var(--mute); min-width: 13ch; }
+.pill-menu { min-height: 40px; padding: 0 14px; background: transparent; color: var(--text); border: 1px solid var(--edge); border-radius: 0; font: 600 .95rem var(--serif); }
+.pill-menu:hover { border-color: var(--blue-text); color: var(--blue-text); }
+.nav-cta { pointer-events: auto; position: absolute; right: var(--gutter); top: 0; }
+
+/* menu as a native <dialog>: Escape and focus handled by the browser */
+.menu { width: min(520px, 100vw); height: 100dvh; max-height: none; margin: 0 0 0 auto; padding: 28px var(--gutter) 40px; background: var(--void); color: var(--text); border: 0; border-left: 1px solid var(--hair); }
+.menu::backdrop { background: rgba(5, 7, 13, .7); }
+.menu nav { display: grid; gap: 4px; margin-top: 56px; }
+.menu nav a { font-size: clamp(2rem, 6vw, 2.6rem); line-height: 1.15; text-decoration: none; padding: 6px 0; border-bottom: 1px solid var(--hair); }
+.menu nav a:hover { color: var(--blue-text); }
+.menu-close { float: right; }
+
+/* shared footer (markup from src/links.js) */
+.foot { position: relative; overflow: hidden; border-top: 1px solid var(--hair); color: var(--mute); font-size: .95rem; background: var(--void); }
+.foot-field { position: absolute; inset: 0; width: 100%; height: 100%; }
+.foot-top { position: relative; }
+.foot-top { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); gap: 40px clamp(32px, 5vw, 80px); padding: clamp(56px, 9vh, 96px) 0 clamp(72px, 12vh, 140px); }
+.foot-mark { display: inline-flex; align-items: center; gap: 14px; color: var(--text); font-size: 2rem; font-weight: 600; text-decoration: none; min-height: 44px; }
+.foot-brand p { margin: 12px 0 28px; font-size: 1.15rem; color: var(--mute); }
+.foot-col h2 { margin-bottom: 18px; font: 400 .8rem var(--mono); color: var(--mute); }
+.foot-col ul, .socs { list-style: none; margin: 0; padding: 0; }
+.foot-col a { display: inline-flex; align-items: center; min-height: 40px; color: var(--text); text-decoration: none; font-size: 1.1rem; }
+.foot-col a:hover { color: var(--blue-text); }
+/* social links: pixel tiles, glyphs follow the text color */
+.socs { display: flex; flex-wrap: wrap; gap: 8px; }
+.soc { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px 0 12px; border: 1px solid var(--edge); color: var(--text); text-decoration: none; font: 400 .85rem var(--mono); transition: border-color .25s var(--ease), color .25s var(--ease); }
+.soc svg { width: 18px; height: 18px; }
+a.soc:hover { border-color: var(--blue-text); color: var(--blue-text); }
+.soc.soon { cursor: default; border-color: var(--hair); color: var(--mute); }
+.soc small { font-size: .7rem; color: var(--mute); }
+@media (max-width: 860px) {
+  .foot-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .foot-brand { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .nav { top: 10px; padding-inline: 10px; }
+  .pill { width: 100%; justify-content: space-between; gap: 10px; }
+  .pill-label { display: none; }
+  .nav-cta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

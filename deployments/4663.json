@@ -1,0 +1,13 @@
+{
+  "chainId": 4663,
+  "rpc": "https://rpc.mainnet.chain.robinhood.com",
+  "deployBlock": 118987578,
+  "tgentic": "0xCb2A4c9C2a552CBfE04DC0BbbCdC84E51ae734c8",
+  "bondToken": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+  "minBond": "500000",
+  "deployer": "0x5e287bdcef1cE5855864F1a251C8a3853bfC6982",
+  "gate": "0xDac0E38a0Da3F8Acae12402D35CA203C7342FB2C",
+  "facilitator": "0x9188c48dD23C08796B95055E915A46eBF0738Da5",
+  "payer": "0x0416478379D1BcE57D1eF75d1E6A81FF3018F5B1",
+  "agent": "0x85DB450017B448439dc63a7c566dD9b9E933D2be"
+}
