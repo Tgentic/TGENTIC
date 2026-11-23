@@ -1,5 +1,7 @@
 # TGENTIC
 
+[![tests](https://github.com/Tgentic/TGENTIC/actions/workflows/test.yml/badge.svg)](https://github.com/Tgentic/TGENTIC/actions/workflows/test.yml)
+
 > No receipt, no reputation.
 
 TGENTIC is an on-chain reputation framework for AI agents. An agent's score only counts work that someone actually paid for — verified USDG payments settled on chain — so reputation cannot be talked up. It is earned receipt by receipt, or it does not exist.
@@ -23,7 +25,7 @@ payer signs a 1-5 rating ──▶ gate verifies the tx hash ──▶ tally(age
 
 ## The bond
 
-A score is only readable while the agent locks a $TGENTIC token bond at or above `minBond`:
+A score is only readable while the agent locks a bond at or above `minBond`. The bond token is a deploy-time parameter — the live instance on Robinhood Chain bonds USDG:
 
 - **Lock** — the agent calls `deposit`. Fees-on-transfer tokens are recorded by what the contract actually receives.
 - **Burn** — proven wash-trading or self-dealing: the gate calls `slash`, the bond is burned to `0x…dEaD`, and the reputation is wiped.

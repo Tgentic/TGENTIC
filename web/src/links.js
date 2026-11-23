@@ -1,6 +1,6 @@
 // One place for the token address and public links, shared by the landing page and the dapp.
 // An empty href = not set yet: rendered as "coming soon", not a dead link.
-export const CA = ""; // fill in the $TGENTIC token address once it is set
+export const CA = ""; // fill in the token address once it is set
 
 // 9x9 pixel glyphs for frameSVG: "1" = main color, "o" = blue accent, "." = empty.
 export const SOCIALS = [

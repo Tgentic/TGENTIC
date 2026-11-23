@@ -13,7 +13,7 @@ interface IERC20 {
 contract TGENTIC {
     // shortcut: a single gate key is fully trusted (to record AND to slash); upgrade to a multisig / multi-verifier before mainnet.
     address public immutable gate;
-    IERC20 public immutable token; // the $TGENTIC bond token
+    IERC20 public immutable token; // the bond token, set at deploy (the live instance bonds USDG)
     uint256 public immutable minBond; // minimum bond for the score to be readable
     uint256 public constant UNLOCK_DELAY = 7 days; // slash window before the bond can be withdrawn
     address public constant DEAD = 0x000000000000000000000000000000000000dEaD;
