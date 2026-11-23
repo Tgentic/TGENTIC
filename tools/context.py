@@ -53,7 +53,7 @@ def roadmap_state():
     phases = []
     current = None
     for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("## Phase"):
+        if line.startswith("## Step"):
             title = line.removeprefix("## ").strip()
             current = {"title": title, "shipped": "shipped" in title.lower(), "done": 0, "total": 0}
             phases.append(current)
@@ -94,7 +94,7 @@ def build_facts():
         "license": "MIT" if (ROOT / "LICENSE").exists() else None,
         "ci": ".github/workflows/test.yml" if (ROOT / ".github" / "workflows" / "test.yml").exists() else None,
         "tests_declared": count_tests(),
-        "phases": [
+        "steps": [
             {
                 "title": p["title"],
                 "status": ("shipped" if p["shipped"] else
@@ -121,8 +121,8 @@ def human(facts):
     out = [f"TGENTIC — {facts['tagline']}", "", facts["what"], ""]
     out.append(f"version: {facts['version']}   license: {facts['license']}   CI: {'yes' if facts['ci'] else 'no'}   tests declared: {facts['tests_declared']}")
     out.append("")
-    out.append("phases:")
-    for p in facts["phases"]:
+    out.append("steps:")
+    for p in facts["steps"]:
         out.append(f"  [{'x' if p['status'] == 'shipped' else ' '}] {p['title']}  ({p['status']}, {p['progress']} items)")
     out.append("")
     out.append("how a payment becomes reputation:")
