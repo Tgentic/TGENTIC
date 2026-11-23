@@ -105,10 +105,13 @@ The deploy scripts write `deployments/<chainId>.json`, `web/.env`, and `gate/.en
 
 ## Roadmap
 
-- Wash-trading detection that triggers `slash` (currently manual).
-- Rate limiting on the gate.
-- ERC-8004 registry integration.
-- A USD-denominated `minBond` via an oracle (token price moves, so the bond's USD value moves with it).
+Five phases, one at a time, each closing a declared limit — see [ROADMAP.md](ROADMAP.md):
+
+1. **Foundation** — shipped (v1.0.1)
+2. **Decentralized trust** — multisig gate, multiple verifiers, evidence-based slashing
+3. **Manipulation resistance** — wash-trading detection, gate rate limiting, dapp flags
+4. **Integration** — TypeScript/Python SDKs, ERC-8004 registry, agent directory
+5. **Bond economy** — dedicated bond token, USD-denominated minBond via oracle, external review
 
 ## Known limits
 
