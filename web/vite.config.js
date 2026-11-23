@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
-// Dua halaman: landing (HTML biasa) dan dapp (React). Dev: /app dialihkan ke app.html (clean URL seperti di produksi).
+// Two pages: landing (plain HTML) and dapp (React). Dev: /app is rewritten to app.html, matching the clean URLs in production.
 const cleanUrls = {
   name: "clean-urls",
   configureServer(server) {

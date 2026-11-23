@@ -11,7 +11,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { ethers, network } = require("hardhat");
 
-const MIN_BOND = BigInt(process.env.MIN_BOND_RAW || ethers.parseUnits("100", 18).toString());
+// USDG has 6 decimals — the default minimum bond is 100 USDG. Override with MIN_BOND_RAW (atomic units).
+const MIN_BOND = BigInt(process.env.MIN_BOND_RAW || ethers.parseUnits("100", 6).toString());
 const BOND_TOKEN = process.env.BOND_TOKEN || "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168"; // USDG mainnet
 
 async function main() {
@@ -21,6 +22,9 @@ async function main() {
   if (fs.existsSync(out) && process.env.FORCE !== "1") throw new Error(`${out} already exists. Set FORCE=1 to redeploy.`);
 
   const env = process.env;
+  for (const k of ["GATE", "FACILITATOR", "PAYER", "AGENT"]) {
+    if (!env[`${k}_PRIVATE_KEY`]) throw new Error(`Missing ${k}_PRIVATE_KEY in .env (see .env.example).`);
+  }
   const addr = (k) => new ethers.Wallet(env[`${k}_PRIVATE_KEY`]).address;
   const roles = { gate: addr("GATE"), facilitator: addr("FACILITATOR"), payer: addr("PAYER"), agent: addr("AGENT") };
 
