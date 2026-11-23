@@ -1,20 +1,23 @@
 {
   "name": "tgentic",
   "version": "1.0.1",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
+  "description": "On-chain reputation for AI agents. No receipt, no reputation.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "hardhat test"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ai-agents",
+    "reputation",
+    "on-chain",
+    "x402",
+    "robinhood-chain"
+  ],
+  "author": "Tgentic",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.29.2"
+    "hardhat": "^2.29.2",
+    "viem": "^2.58.1"
   }
 }
