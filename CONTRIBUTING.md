@@ -7,6 +7,9 @@ a score must always trace back to a real payment.
 
 - Node.js 20 or later.
 - `npm install` at the root, `npm test` — everything must stay green.
+- New to the repo? `python3 tools/context.py` prints the whole project in
+  one screen: what each part is, how a payment becomes reputation, and
+  where to start.
 - Each sub-app (`gate/`, `web/`, `agent-example/`) has its own
   `package.json` and installs separately.
 

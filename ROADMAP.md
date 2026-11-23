@@ -49,15 +49,15 @@ gate survives hostile traffic patterns.
 **Done means:** a third-party developer can integrate TGENTIC in an
 afternoon without reading the contract.
 
-## Phase 5 — Bond economy
+## Phase 5 — Assurance & scale
 
-- [ ] Migrate the live bond from the payment token to a dedicated bond token
-- [ ] USD-denominated `minBond` via an oracle (token price moves; the slash
-      stakes should not silently deflate)
-- [ ] External security review of the contract and gate before this phase ships
+- [ ] External security review of the contract and gate
+- [ ] USD-denominated `minBond` via an oracle — slash stakes should not silently deflate with token prices
+- [ ] Multi-chain receipt verification: same anti-replay rules on any chain the facilitators settle on
+- [ ] Gas and storage profiling for high-receipt agents
 
-**Done means:** the bond's value at stake is predictable in USD, and the
-system has been reviewed by someone we did not write ourselves.
+**Done means:** the system has been reviewed by someone we did not write
+ourselves, and it stays honest at scale.
 
 ---
 

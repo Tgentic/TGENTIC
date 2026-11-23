@@ -53,6 +53,7 @@ web/              landing + dapp (React, viem, Privy login)
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
 test/             contract tests (11) + gate tests (11)
+tools/            context.py (one-call project briefing) + immune.py (security scanner)
 ```
 
 ## Quickstart
@@ -111,7 +112,7 @@ Five phases, one at a time, each closing a declared limit — see [ROADMAP.md](R
 2. **Decentralized trust** — multisig gate, multiple verifiers, evidence-based slashing
 3. **Manipulation resistance** — wash-trading detection, gate rate limiting, dapp flags
 4. **Integration** — TypeScript/Python SDKs, ERC-8004 registry, agent directory
-5. **Bond economy** — dedicated bond token, USD-denominated minBond via oracle, external review
+5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
 
 ## Known limits
 
