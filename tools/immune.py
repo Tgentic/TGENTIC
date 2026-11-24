@@ -37,6 +37,20 @@ SECRET_PATTERNS = [
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\."), "HIGH"),
 ]
 
+# Known public hex values that look like keys to the regex above but are not secrets:
+# the secp256k1 half-order constant (standard ECDSA malleability guard — split in two so
+# this file does not flag itself) and on-chain identifiers stored under identifier-shaped
+# JSON keys (transaction hashes are 32 bytes, the same shape as a private key).
+_HALF_ORDER = "7fffffffffffffffffffffffffffffff" + "5d576e7357a4501ddfe92f46681b20a0"
+SAFE_HEX_VALUES = {"0x" + _HALF_ORDER}
+JSON_IDENTIFIER_KEY = re.compile(r'"(receipts|policy|wire|deploy\w*|tx\w*|\w*hash\w*|\w*root|block\w*|proof\w*|verifier\w*)"\s*:')
+
+
+def is_false_positive_hex(value, line):
+    if value.lower() in SAFE_HEX_VALUES:
+        return True
+    return bool(JSON_IDENTIFIER_KEY.search(line))
+
 # Deliberately noisy patterns get a low ceiling: too short = false positives.
 SCAN_EXTENSIONS = {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".sol", ".json",
                    ".md", ".html", ".css", ".yml", ".yaml", ".env", ".sh", ".py", ".txt"}
@@ -74,14 +88,17 @@ def iter_tree_files(repo):
             yield path
 
 
-def scan_blob(name, text, origin):
+def scan_blob(name, text, origin, quiet=False):
     """Scan one file's content for secrets. Returns count of findings."""
     hits = 0
     for label, pattern, severity in SECRET_PATTERNS:
         for m in pattern.finditer(text):
-            snippet = text[max(0, m.start() - 20):m.end() + 10].replace("\n", " ")
-            fail(severity, "secrets", f"{origin}:{name} matches {label} …{snippet}…")
+            if label == "evm-private-key" and is_false_positive_hex(m.group(0), text[:m.start()].split("\n")[-1]):
+                continue
             hits += 1
+            if not quiet:
+                snippet = text[max(0, m.start() - 20):m.end() + 10].replace("\n", " ")
+                fail(severity, "secrets", f"{origin}:{name} matches {label} …{snippet}…")
     return hits
 
 
@@ -110,11 +127,13 @@ def check_secrets_history(repo):
         for label, pattern, severity in SECRET_PATTERNS:
             regex = pattern.pattern
             out = git(repo, "grep", "-lE", regex, commit, "--", ".")
-            if out.strip():
-                for line in out.strip().splitlines():
-                    _, _, path = line.partition(":")
-                    fail(severity, "secrets-history", f"{commit[:8]} {path} matches {label}")
-                    found += 1
+            for line in out.strip().splitlines():
+                _, _, path = line.partition(":")
+                content = git(repo, "show", f"{commit}:{path}")
+                if not content or scan_blob(path, content, "history", quiet=True) == 0:
+                    continue  # every match in the file was a filtered false positive
+                fail(severity, "secrets-history", f"{commit[:8]} {path} matches {label}")
+                found += 1
     if not found:
         ok("secrets-history", f"clean across {len(commits)} commits")
 

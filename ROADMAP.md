@@ -19,20 +19,22 @@ has to be earned.
 **Done means:** the framework runs end to end — a real paid job produces a
 verifiable receipt. *Shipped.*
 
-## Step 2 — Decentralized trust
+## Step 2 — Decentralized trust (shipped on mainnet)
 
-The single gate key is the biggest declared limit. It goes away here —
-and the contract splits so that changing who is trusted never touches
+The single gate key is the biggest declared limit. It went away —
+and the contract split, so changing who is trusted never touches
 what is counted.
 
-- [ ] State/policy split: a state layer (receipts, tallies, trees — permanent rules) separated from a policy layer (who may record and slash)
-- [ ] Multisig gate: `tally()` and `slash()` behind an m-of-n signer set
-- [ ] Multiple independent verifiers may submit receipts (same anti-replay rules)
-- [ ] Slash requires published evidence (tx hashes, pattern description) before execution
-- [ ] Verifier-set rotation without redeploying the state layer
+- [x] State/policy split: a state layer (receipts, tallies, trees — permanent rules) separated from a policy layer (who may record and slash)
+- [x] Multisig gate: `tally()` and `slash()` behind an m-of-n signer set
+- [x] Multiple independent verifiers may submit receipts (same anti-replay rules)
+- [x] Slash requires published evidence (tx hashes, pattern description) before execution
+- [x] Verifier-set rotation without redeploying the state layer
 
 **Done means:** no single key can decide what counts, and policy can
-change without touching state.
+change without touching state. *Shipped: deployed on mainnet
+(deployments/4663-v2.json, 2-of-3 verifier set) and the first tally was
+recorded through the policy.*
 
 ## Step 3 — Manipulation resistance
 

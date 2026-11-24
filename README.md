@@ -109,7 +109,7 @@ The deploy scripts write `deployments/<chainId>.json`, `web/.env`, and `gate/.en
 Ten steps, one at a time, each closing a declared limit or opening the framework to someone new — see [ROADMAP.md](ROADMAP.md):
 
 1. **Foundation** — shipped (v1.0.1)
-2. **Decentralized trust** — state/policy contract split, multisig verifiers, evidence-based slashing
+2. **Decentralized trust** — shipped on mainnet: state/policy split, 2-of-3 verifiers, evidence-based slashing
 3. **Manipulation resistance** — wash-trading detection, application-layer rate limiting, dapp flags
 4. **Integration** — TypeScript/Python SDKs, ERC-8004 registry, agent directory
 5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
