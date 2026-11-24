@@ -1,0 +1,21 @@
+{
+  "chainId": 4663,
+  "line": "v2",
+  "rpc": "https://rpc.mainnet.chain.robinhood.com",
+  "receipts": "0x23537F09062134e6cfD8FF8D0a49b263D93bdB27",
+  "policy": "0x4651c76C501C54b6b649F4024BE34F7C58f7f4D3",
+  "bondToken": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+  "minBond": "500000",
+  "verifiers": [
+    "0xDac0E38a0Da3F8Acae12402D35CA203C7342FB2C",
+    "0x9188c48dD23C08796B95055E915A46eBF0738Da5",
+    "0x0416478379D1BcE57D1eF75d1E6A81FF3018F5B1"
+  ],
+  "threshold": 2,
+  "deployer": "0x5e287bdcef1cE5855864F1a251C8a3853bfC6982",
+  "deployTxs": {
+    "receipts": "0xdcb0b867e9f829eba240568283739d1858b2a92b77a84302a16a2fb75d47af5e",
+    "policy": "0x54c20c0144a5a071a5d5caa2253fe7af489467a2ede2eec0265a137f9c99e812",
+    "wire": "0x314d768947ce6e6d874244522eef2cc3a683f1fe44396895a6f68a35cb71853d"
+  }
+}

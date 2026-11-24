@@ -121,7 +121,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 
 ## Known limits
 
-- A single gate key is fully trusted to record and to slash. The v2 contract line (Receipts.sol + Policy.sol) implements the m-of-n replacement; the live v1 deployment still runs a single key until it migrates.
+- A single gate key is fully trusted to record and to slash. The v2 line (Receipts.sol + Policy.sol) is deployed on mainnet with a 2-of-3 verifier set (see deployments/4663-v2.json); the dapp still reads the v1 contract until the migration is cut over.
 - Self-dealing is only caught when payer = agent exactly; payments from another wallet owned by the same person are not detected. The dapp shows the unique payer count so observers can judge.
 - Facilitator addresses are taken from their public documentation and re-checked before use.
 - Tested on a local Hardhat network; the live-network flow is exercised by `scripts/demo-testnet.js`.
