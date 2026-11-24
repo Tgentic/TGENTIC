@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0 — 2026-11-24
+
+Roadmap Step 2, contract layer: decentralized trust.
+
+- **Receipts.sol** — the state layer: receipts, tallies and bonds, with
+  recording and slashing restricted to the policy contract. Same tally,
+  bond and slash semantics as v1.
+- **Policy.sol** — the policy layer: an m-of-n verifier set approves
+  tally, slash and rotation actions with ECDSA signatures over
+  domain-separated digests (chain id + contract address bound). Anyone
+  may submit an approved action — the signatures carry the authority.
+- Slash evidence is part of the signed digest (verifiers sign the hash
+  of what they reviewed).
+- Verifier-set rotation without redeploying the state layer.
+- 9 new tests (31 total). The live v1 deployment is unaffected.
+
 ## 1.0.1 — 2026-11-23
 
 Security hardening for the gate's static file server. All findings were

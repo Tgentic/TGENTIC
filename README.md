@@ -46,13 +46,13 @@ Anyone can read the same data with any wallet or RPC — no account, no API key:
 ## Repository layout
 
 ```
-contracts/        TGENTIC.sol (tally + bond + slash), MockToken.sol (tests only)
+contracts/        TGENTIC.sol (v1: tally + bond + slash), Receipts.sol + Policy.sol (v2: state/policy split, m-of-n verifiers), MockToken.sol (tests only)
 gate/             verifier server: checks a USDG tx hash + payer signature, then tallies
 agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/* packages
 web/              landing + dapp (React, viem, Privy login)
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
-test/             contract tests (11) + gate tests (11)
+test/             contract tests (11) + gate tests (11) + policy tests (9)
 tools/            context.py (one-call project briefing) + immune.py (security scanner)
 ```
 
@@ -62,7 +62,7 @@ Needs Node.js 20 or later.
 
 ```bash
 npm install
-npm test                    # 22 tests: contract + gate on a local Hardhat network
+npm test                    # 31 tests: contract + gate + policy on a local Hardhat network
 ```
 
 Run the dapp against a local node:
@@ -121,7 +121,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 
 ## Known limits
 
-- A single gate key is fully trusted to record and to slash. Before serious value is at stake: a multisig or several verifiers.
+- A single gate key is fully trusted to record and to slash. The v2 contract line (Receipts.sol + Policy.sol) implements the m-of-n replacement; the live v1 deployment still runs a single key until it migrates.
 - Self-dealing is only caught when payer = agent exactly; payments from another wallet owned by the same person are not detected. The dapp shows the unique payer count so observers can judge.
 - Facilitator addresses are taken from their public documentation and re-checked before use.
 - Tested on a local Hardhat network; the live-network flow is exercised by `scripts/demo-testnet.js`.
