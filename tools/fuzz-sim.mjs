@@ -291,10 +291,13 @@ function checkFlagsInvariants(logs, agent, out, ctx) {
   v(JSON.stringify([...out.flags].sort()) === JSON.stringify(bf.flags), "flags != brute force", { ...ctx, got: out.flags, want: bf.flags });
 }
 
+// dedicated seeded stream for permutation sampling — Math.random() here would
+// make runs non-reproducible even with a fixed scenario seed
+const shuffleRng = rng(0x5EED);
 function checkOrderIndependence(logs, agent, out, ctx) {
   const shuffled = [...logs];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(shuffleRng() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const out2 = computeFlags(shuffled, agent);
