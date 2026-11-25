@@ -44,11 +44,35 @@ byte-identical addresses and bytecode sizes to the same proxies on Ethereum
 mainnet, under the same owner `0x547289319c3e6aedb179c0b8e8af0b5acd062603`.
 That is the official replayed (triple-presigned) deployment.
 
-**The registry is already a live ecosystem on 4663** (queried directly):
-~15,500 agents registered (agentIds 0–26,516), ~12,300 NewFeedback events.
-Existing usage is unverified reputation — generic tags like `1.1.0`,
-off-chain feedback files with no payment proof. None of it carries
-`proofOfPayment` — that slot is empty, and it is ours.
+**The registry is already a live ecosystem on 4663** (full census,
+limit-safe counting — naive scans silently drop ranges over the RPC's
+10k-log cap): **26,517 agents registered** (agentIds 0–26,516, sequential;
+Registered count == ERC-721 mint count everywhere), **19,563 NewFeedback
+events** — 13,220 `data:` URIs + 6,027 `https:` URIs.
+
+**Existing payment-proven feedback — the honest correction.** 2,035 of the
+`data:` feedback files already carry `proofOfPayment` — all from
+**priors.trade**, a credit/lending protocol whose entries we spot-verified:
+tx `0x815125e1…` contains a real 5.0 USDG transfer matching the file's
+from/to exactly. So "first payment-proven feedback" would be a false claim.
+Active projects observed: priors.trade, insulaworld.com (3,393 entries),
+loomdesk.trade (1,097), factoragents.fun (1,008), brainchain, agentware.sh,
+execution.market — with tags like `priors-score`, `credit.statement`,
+`trading`, `theft`, `factorReport`.
+
+**What remains genuinely ours** (verified by reading their files):
+- priors' proofs serve **one protocol's lending book** — credit scores for
+  its borrowers. TGENTIC is the general-purpose layer: any agent, any job,
+  any payer.
+- Their score has **no bond** behind it. Ours is gated by a locked USDG
+  bond — stake-backed, slashable, visible on-chain.
+- They publish a number; we publish a number **plus manipulation
+  heuristics** (payer concentration, timing, amount cycling) and an m-of-n
+  verifier policy.
+- Our receipts are **contract-verified before tally** — the gate requires
+  the settled payment tx to exist and pay the agent before it writes. A
+  JSON file claiming a txHash is evidence; a contract that refuses to
+  attest without the payment is a guarantee.
 
 **Consequence: we do not deploy registries. We integrate against the
 official ones.** Any ERC-8004 indexer/scanner that supports Robinhood Chain
@@ -70,8 +94,8 @@ will see our agents the moment they register.
 
 ERC-8004 accepts **any** feedback from **any** address — honest by design,
 spam-prone by consequence (the spec itself forces clientAddresses filtering
-in `getSummary` for this reason). On 4663 today that means ~12,300 feedback
-entries, none payment-verified.
+in `getSummary` for this reason). On 4663 today that means ~19,600 feedback
+entries — 2,035 already payment-proven (priors.trade), the rest unverified.
 
 TGENTIC feedback entries are different: every one carries a
 `proofOfPayment.txHash` that anyone can verify on the explorer — the payment
