@@ -44,13 +44,13 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
-      # The Docker image builds web/ in a context where only web/ and gate/src/flags.js
+      # The Docker image builds web/ in a context where only web/ and sdk/src/flags.js
       # exist — a checkout-root build can pass while the image fails. Replicate that layout.
       - name: Build web the way the Docker image does
         run: |
-          rm -rf /tmp/dsim && mkdir -p /tmp/dsim/app/gate/src
+          rm -rf /tmp/dsim && mkdir -p /tmp/dsim/app/sdk/src
           cp -r web /tmp/dsim/app/web
-          cp gate/src/flags.js /tmp/dsim/app/gate/src/flags.js
+          cp sdk/src/flags.js /tmp/dsim/app/sdk/src/flags.js
           rm -rf /tmp/dsim/app/web/node_modules
           ln -s "$PWD/web/node_modules" /tmp/dsim/app/web/node_modules
           cd /tmp/dsim/app/web && npm run build

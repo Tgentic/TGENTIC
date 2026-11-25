@@ -50,9 +50,10 @@ contracts/        TGENTIC.sol (v1: tally + bond + slash), Receipts.sol + Policy.
 gate/             verifier server: checks a USDG tx hash + payer signature, then tallies
 agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/* packages
 web/              landing + dapp (React, viem, Privy login)
+sdk/              @tgentic/sdk — read and verify an agent's score from JS/TS (score, receipts, risk, verify)
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
-test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (10)
+test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (10) + sdk tests (8)
 docs/             design notes — the thinking before the code (time-weighted scoring, …)
 tools/            context.py (one-call project briefing) + immune.py (security scanner)
 ```
@@ -63,7 +64,7 @@ Needs Node.js 20 or later.
 
 ```bash
 npm install
-npm test                    # 40 tests: contract + gate + policy + heuristics on a local Hardhat network
+npm test                    # 49 tests: contract + gate + policy + heuristics + sdk on a local Hardhat network
 ```
 
 Run the dapp against a local node:
@@ -80,6 +81,14 @@ Run the gate:
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
 npm start               # :8788 — GET /health, GET /risk?agent=0x…, POST /tally, serves web/dist
+```
+
+Read an agent's reputation from your own code (the SDK — mainnet by default):
+
+```js
+import { createClient } from "../sdk/src/index.js"; // published as @tgentic/sdk + viem
+const tg = createClient();
+const v = await tg.verify("0xAgentAddress"); // score + receipts + manipulation flags, one call
 ```
 
 Run the paid agent example:
@@ -112,7 +121,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 1. **Foundation** — shipped (v1.0.1)
 2. **Decentralized trust** — shipped on mainnet: state/policy split, 2-of-3 verifiers, evidence-based slashing
 3. **Manipulation resistance** — shipped on mainnet: on-chain flags (Heuristics 0xe9D4eaa0…), event-based detection at /risk, rate limiting, dapp signals
-4. **Integration** — TypeScript/Python SDKs, ERC-8004 registry, agent directory
+4. **Integration** — TypeScript SDK shipped (sdk/); next: Python SDK, ERC-8004 registry, agent directory
 5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
 6. **Agent identity** — signed agent manifests, identity-to-score resolution, key rotation
 7. **Reputation consumption** — marketplace APIs, hiring flow, viewing-key access, pricing signals

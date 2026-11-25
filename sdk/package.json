@@ -1,0 +1,17 @@
+{
+  "name": "@tgentic/sdk",
+  "version": "1.0.0",
+  "description": "Read and verify TGENTIC agent reputation from JavaScript/TypeScript — scores, receipts and manipulation signals from Robinhood Chain.",
+  "license": "MIT",
+  "type": "module",
+  "author": "Tgentic",
+  "keywords": ["ai-agents", "reputation", "x402", "robinhood-chain", "viem"],
+  "engines": { "node": ">=20" },
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" }
+  },
+  "files": ["src"],
+  "peerDependencies": {
+    "viem": ">=2.40.0"
+  }
+}

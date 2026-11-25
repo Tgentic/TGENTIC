@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.4.0 — 2026-11-25
+
+Roadmap Step 4, first slice: the TypeScript SDK.
+
+- **sdk/** — `@tgentic/sdk`: `createClient()` defaults to mainnet (the
+  deployed v1 tally + public RPC, zero config) and returns score,
+  receipts, risk and a single `verify()` answer for hiring flows.
+  Point it at any deployment via `address` + `rpcUrl` — the framework
+  is MIT and anyone can run their own instance.
+- **sdk/src/flags.js** is now the canonical manipulation detector —
+  the gate's `/risk`, the dapp's Signals section and the SDK all run
+  the same pure function (gate and web import it from the SDK, not a
+  copy).
+- Footer links wired (GitHub, docs, roadmap, contributing); the Docker
+  webbuild stage copies the shared detector into the build context —
+  fixes a build that passed CI but failed the image.
+- CI web-build now replicates the Docker layout so that class of bug
+  fails before merge.
+- 8 new tests (49 total). Verified end-to-end on mainnet: `verify()`
+  reads the live agent (score 1,000,000 / 1 receipt / no flags).
+
 ## 1.3.0 — 2026-11-25
 
 Roadmap Step 3, completion: flags in the dapp + the decay design note.

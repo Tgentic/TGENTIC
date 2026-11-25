@@ -1,10 +1,11 @@
 // Step 3: manipulation detection over the state layer's Tallied events.
 // Event history gives what the state mappings alone cannot: which payer,
 // which amounts, which blocks — the ingredients of wash-trading patterns.
-// The flags themselves live in flags.js — pure, dependency-free, shared with
-// the dapp bundle so the site, the API and the audits always agree.
+// The flags themselves live in sdk/src/flags.js — pure, dependency-free, the
+// canonical detector shared by the gate, the dapp bundle and the SDK so the
+// site, the API and the audits always agree.
 import { parseAbi } from "viem";
-import { computeFlags } from "./flags.js";
+import { computeFlags } from "../../sdk/src/flags.js";
 
 export { computeFlags };
 

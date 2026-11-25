@@ -48,7 +48,7 @@ gate survives hostile traffic patterns.
 
 ## Step 4 — Integration
 
-- [ ] TypeScript SDK: read and verify an agent's score before hiring it
+- [x] TypeScript SDK: read and verify an agent's score before hiring it — sdk/ (@tgentic/sdk), tg.verify() returns score + manipulation signals; also the canonical home of the shared detector
 - [ ] Python SDK for agent frameworks
 - [ ] ERC-8004 trust registry integration
 - [ ] Agent directory in the dapp (discovery by counted score)
