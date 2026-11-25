@@ -150,6 +150,8 @@ function Profile({ a }) {
         <div><dt>Bond</dt><dd>{tok(d.bond, tk.decimals)} <small>{tk.symbol}</small></dd></div>
       </dl>
 
+      <p className="hint">Composes with the <a href="https://robinhoodchain.blockscout.com/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" target="_blank" rel="noreferrer">ERC-8004 trust registry ↗</a> — agents registered in the standard can carry TGENTIC's payment-proven feedback.</p>
+
       {risk && (
         <section className="block" aria-label="Manipulation signals">
           <h2>Signals</h2>
