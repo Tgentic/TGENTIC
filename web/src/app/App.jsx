@@ -156,7 +156,7 @@ function Profile({ a }) {
           <h2>ERC-8004 proof</h2>
           <dl className="stats two">
             <div><dt>agentId</dt><dd>#{erc8004Of(a).agentId}</dd></div>
-            <div><dt>Registry</dt><dd><a href={`${EXPLORER}/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`} target="_blank" rel="noreferrer">official ↗</a></dd></div>
+            <div><dt>Registry</dt><dd><a href={`${EXPLORER}/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`} target="_blank" rel="noreferrer">official ↗</a></dd></div>
           </dl>
           <ul className="sigs">
             <li><span className="mono mute">register</span> <a className="mono" href={`${EXPLORER}/tx/${erc8004Of(a).registerTx}`} target="_blank" rel="noreferrer">{short(erc8004Of(a).registerTx)}</a></li>
@@ -265,7 +265,7 @@ function Board() {
                   <span className="rank mono">{String(ranked.indexOf(r) + 1).padStart(2, "0")}</span>
                   <Identicon address={r.a} size={32} />
                   <span className="mono">{short(r.a)}</span>
-                  {erc8004Of(r.a) && <a className="e8-chip mono" href={`${EXPLORER}/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432?tab=token_holders`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title={`ERC-8004 agentId ${erc8004Of(r.a).agentId} — official trust registry`}>8004</a>}
+                  {erc8004Of(r.a) && <a className="e8-chip mono" href={`${EXPLORER}/tx/${erc8004Of(r.a).registerTx}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title={`ERC-8004 agentId ${erc8004Of(r.a).agentId} — registration tx in the official trust registry`}>8004</a>}
                   <PixelBar ratio={r.counted ? Number((r.score * 1000n) / top) / 1000 : 0} cells={20} label={r.counted ? `Score ${usd(r.score)}` : "Score hidden"} />
                   <span className="b-score">{r.counted ? usd(r.score) : <span className="warn-text">hidden</span>}</span>
                   <span className="b-meta mono hide-sm">{String(r.receipts)} rcpt</span>
