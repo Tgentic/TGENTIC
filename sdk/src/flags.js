@@ -11,11 +11,19 @@ export function computeFlags(logs, agent) {
   // payment tx hash so a merged history never counts one payment twice.
   const seen = new Map();
   for (const l of logs) {
-    const key = l.txHash ? String(l.txHash).toLowerCase() : `log-${seen.size}`;
+    // Fallback key must be content-derived, not position-derived: `log-N`
+    // depended on input order, so permuted histories could dedupe
+    // differently (found by tools/fuzz-sim.mjs).
+    const key = l.txHash
+      ? String(l.txHash).toLowerCase()
+      : `log-${l.blockNumber}-${String(l.payer).toLowerCase()}-${l.amount}`;
     if (!seen.has(key)) seen.set(key, l);
   }
   logs = [...seen.values()];
-  logs.sort((a, b) => (a.blockNumber < b.blockNumber ? -1 : 1));
+  // Three-way compare: returning 1 for equal blockNumbers is an inconsistent
+  // comparator — TimSort can then order equal-block receipts differently
+  // depending on input permutation, flipping the timing flag (fuzz finding).
+  logs.sort((a, b) => (a.blockNumber < b.blockNumber ? -1 : a.blockNumber > b.blockNumber ? 1 : 0));
 
   // payer concentration
   const perPayer = new Map();
