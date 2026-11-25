@@ -51,6 +51,7 @@ gate/             verifier server: checks a USDG tx hash + payer signature, then
 agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/* packages
 web/              landing + dapp (React, viem, Privy login)
 sdk/              @tgentic/sdk — read and verify an agent's score from JS/TS (score, receipts, risk, verify)
+sdk-python/       tgentic — the same SDK for Python agent frameworks, zero dependencies
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
 test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (10) + sdk tests (8)
@@ -121,7 +122,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 1. **Foundation** — shipped (v1.0.1)
 2. **Decentralized trust** — shipped on mainnet: state/policy split, 2-of-3 verifiers, evidence-based slashing
 3. **Manipulation resistance** — shipped on mainnet: on-chain flags (Heuristics 0xe9D4eaa0…), event-based detection at /risk, rate limiting, dapp signals
-4. **Integration** — TypeScript SDK shipped (sdk/); next: Python SDK, ERC-8004 registry, agent directory
+4. **Integration** — TypeScript + Python SDKs shipped (sdk/, sdk-python/); next: ERC-8004 registry, agent directory
 5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
 6. **Agent identity** — signed agent manifests, identity-to-score resolution, key rotation
 7. **Reputation consumption** — marketplace APIs, hiring flow, viewing-key access, pricing signals

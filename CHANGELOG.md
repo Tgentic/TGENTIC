@@ -1,5 +1,16 @@
 # Changelog
 
+
+## 1.5.0 — Step 4: Python SDK
+
+- `sdk-python/` — `import tgentic` → `tg.verify(agent)`: counted score, receipts,
+  manipulation signals. Zero dependencies (stdlib urllib + vendored Keccak-256
+  pinned against published vectors).
+- Same detector as TS: `compute_flags` is a line-for-line port of
+  `sdk/src/flags.js` — flag strings identical across SDKs.
+- Codec proven, not assumed: ABI calldata byte-identical to viem;
+  live-verified on mainnet (score 1,000,000 · receipt 0x44d4be19… · block 118989002).
+- New CI job runs the unittest suite.
 ## 1.4.0 — 2026-11-25
 
 Roadmap Step 4, first slice: the TypeScript SDK.

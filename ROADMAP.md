@@ -51,7 +51,7 @@ detector in the gate at /risk, the dapp and the SDK.*
 ## Step 4 — Integration
 
 - [x] TypeScript SDK: read and verify an agent's score before hiring it — sdk/ (@tgentic/sdk), tg.verify() returns score + manipulation signals; also the canonical home of the shared detector
-- [ ] Python SDK for agent frameworks
+- [x] Python SDK for agent frameworks — sdk-python/ (`import tgentic; tg.verify(agent)`), zero dependencies, same flags as the TS SDK
 - [ ] ERC-8004 trust registry integration
 - [ ] Agent directory in the dapp (discovery by counted score)
 

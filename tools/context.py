@@ -28,6 +28,7 @@ COMPONENTS = {
     "agent-example": "A minimal x402-paid agent (express + official @x402/* packages) that charges USDG per job.",
     "web": "Landing page + dapp (React, viem, Privy login): lookup, leaderboard, bond, manipulation Signals.",
     "sdk": "@tgentic/sdk — read and verify an agent's score from JS/TS (score, receipts, risk, verify). Also the canonical home of the shared pure detector (src/flags.js).",
+    "sdk-python": "tgentic — the same SDK for Python agent frameworks; zero dependencies, same flags, same codec (proven byte-identical to viem).",
     "docs": "Design notes — the thinking before the code (time-weighted scoring, …).",
     "test": "Hardhat suites: contract behavior, the policy layer, heuristics, the gate's HTTP paths, and the SDK.",
     "scripts": "Deploy scripts (mainnet 4663 / testnet 46630), the v2 deployment, and a full testnet demo flow.",

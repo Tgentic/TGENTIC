@@ -54,3 +54,15 @@ jobs:
           rm -rf /tmp/dsim/app/web/node_modules
           ln -s "$PWD/web/node_modules" /tmp/dsim/app/web/node_modules
           cd /tmp/dsim/app/web && npm run build
+
+  sdk-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests
+        working-directory: sdk-python
+        env:
+          PYTHONPATH: sdk-python
