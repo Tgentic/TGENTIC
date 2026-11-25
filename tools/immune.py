@@ -42,8 +42,16 @@ SECRET_PATTERNS = [
 # this file does not flag itself) and on-chain identifiers stored under identifier-shaped
 # JSON keys (transaction hashes are 32 bytes, the same shape as a private key).
 _HALF_ORDER = "7fffffffffffffffffffffffffffffff" + "5d576e7357a4501ddfe92f46681b20a0"
-SAFE_HEX_VALUES = {"0x" + _HALF_ORDER}
-JSON_IDENTIFIER_KEY = re.compile(r'"(receipts|policy|wire|heuristic\w*|deploy\w*|tx\w*|\w*hash\w*|\w*root|block\w*|proof\w*|verifier\w*)"\s*:')
+# Verifiably public chain artifacts (on the public explorer / in event signatures),
+# not secrets: the secp256k1 half-order, our mainnet payment + tally txs, and the
+# Tallied event topic hash that test fixtures legitimately embed.
+SAFE_HEX_VALUES = {
+    "0x" + _HALF_ORDER,
+    "0x44d4be1951fe871593f4e4dd25d9b34c2f048150fa707bb721b84284f0736096",
+    "0x2d475b2ab23a66c9bdf6c5608b247e2b81d272c6e9e5e2cc8af32509e34b9daf",
+    "0x9daa2ff566b975dcfccd8073c33e394c4596081ec4ea918cb29f390268ab2a9e",
+}
+JSON_IDENTIFIER_KEY = re.compile(r'"(receipts|policy|wire|heuristic\w*|deploy\w*|tx\w*|\w*hash\w*|\w*root|block\w*|proof\w*|verifier\w*)"\s*:', re.IGNORECASE)
 
 
 def is_false_positive_hex(value, line):
