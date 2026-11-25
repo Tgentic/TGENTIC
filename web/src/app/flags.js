@@ -1,7 +1,9 @@
 // Manipulation signals in the dapp. The detector is the gate's computeFlags —
 // the same pure function the /risk endpoint and the mainnet proof scripts run,
 // so the site, the API and the audits always agree on what was flagged.
-import { computeFlags } from "../../../gate/src/heuristics.js";
+// flags.js is dependency-free on purpose: this import must resolve in CI too,
+// where gate/node_modules is not installed.
+import { computeFlags } from "../../../gate/src/flags.js";
 
 /** Run the detector over an agent's Tallied logs (viem event objects). */
 export function flagsFor(agent, logs) {
