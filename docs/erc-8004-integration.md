@@ -149,3 +149,49 @@ quorum responses; `appendResponse` flag reports.
   every other ERC-8004 chain uses.
 - Bootstrap honesty: our feedback entries carry the same payer wallets —
   visible on-chain, labeled team-run here just like everywhere else.
+
+
+## Integration status: SHIPPED on mainnet (4663)
+
+Executed against the official singletons — every tx verifiable in the
+explorer (robinhoodchain.blockscout.com):
+
+| Agent | agentId | register tx |
+|---|---|---|
+| `0x85DB45…dD2be` (reference) | 26520 | `0x1da119bc39af341037678cd5e05da2706313e0db8c06643cfab3d3f273cc3fe5` |
+| `0x962Fb7…5Ad81` | 26521 | `0x5e8e076c6f6a808a6697f5cfd9b4e1e3cc48084ed335069642103c4f2ed9f59f` |
+| `0x22b453…de375` | 26522 | `0xe691f656b6491e2b32740bca3b1af04133f1b010308ca192eb408d005c32463b` |
+| `0x71F662…C9c745` | 26523 | `0x5c4607cd279904694e23d47468384813d95b147f1687fa438330885a7bd9e9d` |
+| `0x498a54…4D2393` | 26524 | `0x1803304ced3e2ef6bfa8e8e5149d5920674e79c61a45da862b185198dbd93e54` |
+| `0xcfd9A3…BC661` | 26525 | `0x78fcf8642f621e7ed7c4c26d40fbcf48be5aeb0df25f5d2287c2807ee8939823` |
+| `0xfe9732…8CDd9d` | 26526 | `0xb25772b5aae72bc8ad59eae6ba0824cb56bec9459d23ff080db2d47a3a8ebe15` |
+
+All 7 registration files verified via `tokenURI` decode: spec-conformant
+(`type: …registration-v1`, correct `registrations[]`, `supportedTrust`
+incl. crypto-economic), `agentWallet` auto-set to each agent's own address
+(self-registration).
+
+Feedback entries (one per Tallied receipt, signed by the paying wallet as
+required by the spec — `value` = rating × 20, `tag1` = "starred", `tag2` =
+"x402-verified", `feedbackURI` = data: JSON with `proofOfPayment.txHash`
+pointing to the settled payment, `feedbackHash` = keccak256 of the file):
+
+| agentId | payer | value | feedback tx |
+|---|---|---|---|
+| 26520 | `0x0416…f5b1` | 100 | `0xa8d45250ab4a474b2ca7e4c997ed93e797c1319fb712dbbf67425b01b60cb367` |
+| 26521 | `0x0416…f5b1` | 100 | `0x125b555b83b85ff2a75c355ff212536fdf30e091b5e4441eaca89668426c733d` |
+| 26522 | `0x6CB9…cf16D` | 100 | `0xc70282177c6dc98c95417ba4ee29e76337582a0be88f9a71785c13ad91e3490f` |
+| 26523 | `0x0416…f5b1` | 80 | `0x1c46f97e4b641dd074f5606c57985d0e76408bbd382a11e6f144ec7b07365bc4` |
+| 26524 | `0x6CB9…cf16D` | 100 | `0x205d9454e90580be398addb6e340fdc31ccc4ca3f39b5a9fa9649e0883a8ffc6` |
+| 26525 | `0x0416…f5b1` | 80 | `0xdaa7023b69f3b9c46d40388b1e3dfdfe05df9d86d0eeaa4a073f448d9655ef74` |
+| 26526 | `0x6CB9…cf16D` | 100 | `0xa6591317d533b8a9a550b7a4a8a5fdf8593d1ed4ed6e2612b1db46ae81b3a097` |
+| 26520 | `0x6CB9…cf16D` | 100 | `0x5ed8d0773d3caf3936e437214509642f1648e67615cce567be781a688907f9b7` |
+
+Tx receipts confirmed (status 0x1, `NewFeedback` emitted from the official
+ReputationRegistry `0x8004BAa1…`). Bootstrap honesty unchanged: the payers
+are the same team wallets disclosed on the board — visible on-chain, and
+now also readable through any ERC-8004 client.
+
+Remaining polish (tracked separately): SDK helpers (`registerAgent`,
+`feedbackCalldata`) and dapp links to agentIds. The on-chain integration
+itself is complete and public.
