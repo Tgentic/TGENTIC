@@ -48,7 +48,7 @@ gate survives hostile traffic patterns. *Shipped: deployed on mainnet
 (deployments/4663-v3.json) and callable by anyone — plus the same pure
 detector in the gate at /risk, the dapp and the SDK.*
 
-## Step 4 — Integration
+## Step 4 — Integration (shipped on mainnet)
 
 - [x] TypeScript SDK: read and verify an agent's score before hiring it — sdk/ (@tgentic/sdk), tg.verify() returns score + manipulation signals; also the canonical home of the shared detector
 - [x] Python SDK for agent frameworks — sdk-python/ (`import tgentic; tg.verify(agent)`), zero dependencies, same flags as the TS SDK

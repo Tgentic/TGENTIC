@@ -1,6 +1,23 @@
 # Changelog
 
 
+## 1.7.0 — Step 4 complete: ERC-8004 trust registry integration
+
+- Live on the official ERC-8004 singletons on chain 4663 (the standard's
+  MetaMask/EF/Google/Coinbase authors deploy the same addresses on every
+  chain): all 7 board agents registered (agentIds 26520–26526) with
+  spec-complete data: URI registration files.
+- Every Tallied receipt is mirrored as ERC-8004 feedback carrying
+  proofOfPayment — the settled payment's tx hash — signed by the paying
+  wallet as the spec requires. 8 feedback entries, each explorer-verifiable.
+- Dapp views now auto-refresh: directory, receipts feed and agent profiles
+  silently refetch every 30 s (failed polls keep the last good data).
+- New tool: tools/watch-receipts.py — realtime Tallied monitor that flags
+  payers outside a known set as EXTERNAL.
+- Mapping research, cross-chain authenticity proof of the registries and the
+  honest competitive landscape: docs/erc-8004-integration.md.
+
+
 ## 1.6.1 — /risk accepts any address casing
 
 - Fixed a public-UX bug: a mixed-case address whose EIP-55 checksum didn't match
