@@ -6,13 +6,13 @@ export const CA = ""; // fill in the token address once it is set
 export const SOCIALS = [
   { name: "X", href: "https://x.com/_Tgentic", glyph: ["11.....11", ".11...11.", "..11.11..", "...111...", "....o....", "...111...", "..11.11..", ".11...11.", "11.....11"] },
   { name: "Telegram", href: "", glyph: ["........1", "......111", "....111.1", "..111..1.", "1111..11.", "...o.11..", "...o.1...", "...oo....", "........."] },
-  { name: "GitHub", href: "", glyph: [".1.....1.", ".11...11.", ".1111111.", "111111111", "11o111o11", "111111111", ".1111111.", "..1...1..", "..1...1.."] },
-  { name: "Docs", href: "", glyph: [".11111...", ".1...11..", ".1...111.", ".1.....1.", ".1.ooo.1.", ".1.....1.", ".1.ooo.1.", ".1.....1.", ".1111111."] },
+  { name: "GitHub", href: "https://github.com/Tgentic", glyph: [".1.....1.", ".11...11.", ".1111111.", "111111111", "11o111o11", "111111111", ".1111111.", "..1...1..", "..1...1.."] },
+  { name: "Docs", href: "https://github.com/Tgentic/TGENTIC#readme", glyph: [".11111...", ".1...11..", ".1...111.", ".1.....1.", ".1.ooo.1.", ".1.....1.", ".1.ooo.1.", ".1.....1.", ".1111111."] },
 ];
 
 const COLS = [
   ["Dapp", [["Check a tally", "/app#/lookup"], ["Leaderboard", "/app#/board"], ["Your bond", "/app#/bond"]]],
-  ["Protocol", [["Why receipts", "/#why"], ["How a tally is counted", "/#count"], ["Bond", "/#bond"], ["Who reads a tally", "/#readers"]]],
+  ["Protocol", [["Why receipts", "/#why"], ["How a tally is counted", "/#count"], ["Bond", "/#bond"], ["Who reads a tally", "/#readers"], ["Roadmap", "https://github.com/Tgentic/TGENTIC/blob/main/ROADMAP.md"], ["Contributing", "https://github.com/Tgentic/TGENTIC/blob/main/CONTRIBUTING.md"]]],
 ];
 
 /** Shared footer as HTML (the landing page uses innerHTML, the dapp uses dangerouslySetInnerHTML). */
