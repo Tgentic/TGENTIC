@@ -37,6 +37,19 @@ reference UUPS proxy pattern. Testnet (46630) singletons:
 `0x8004A818BFB912233c491871b3d84c89A494BD9e` /
 `0x8004B663056A597Dffe9eCcC1965A193B7388713`.
 
+**Authenticity proven cross-chain, not assumed**: the ERC-1967 proxies on
+4663 resolve to implementation `0x7274e874ca62410a93bd8bf61c69d8045e399c02`
+(identity) and `0x16e0fa7f7c56b9a767e34b192b51f921be31da34` (reputation) —
+byte-identical addresses and bytecode sizes to the same proxies on Ethereum
+mainnet, under the same owner `0x547289319c3e6aedb179c0b8e8af0b5acd062603`.
+That is the official replayed (triple-presigned) deployment.
+
+**The registry is already a live ecosystem on 4663** (queried directly):
+~15,500 agents registered (agentIds 0–26,516), ~12,300 NewFeedback events.
+Existing usage is unverified reputation — generic tags like `1.1.0`,
+off-chain feedback files with no payment proof. None of it carries
+`proofOfPayment` — that slot is empty, and it is ours.
+
 **Consequence: we do not deploy registries. We integrate against the
 official ones.** Any ERC-8004 indexer/scanner that supports Robinhood Chain
 will see our agents the moment they register.
@@ -57,7 +70,8 @@ will see our agents the moment they register.
 
 ERC-8004 accepts **any** feedback from **any** address — honest by design,
 spam-prone by consequence (the spec itself forces clientAddresses filtering
-in `getSummary` for this reason).
+in `getSummary` for this reason). On 4663 today that means ~12,300 feedback
+entries, none payment-verified.
 
 TGENTIC feedback entries are different: every one carries a
 `proofOfPayment.txHash` that anyone can verify on the explorer — the payment
