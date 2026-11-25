@@ -38,7 +38,7 @@ The gate key is the only caller allowed to `tally()` and `slash()`.
 `web/` serves a landing page and a dapp that reads the contract directly:
 
 - **Lookup** — paste an agent address: counted score, total paid, receipts, unique payers, bond status.
-- **Leaderboard** — ranked by counted score, unique payers shown next to every row so one-payer agents are easy to spot.
+- **Agent directory** — every agent discovered from Tallied receipts, ranked by counted score; receipts, paid totals and flag markers per row so one-payer agents are easy to spot.
 - **Bond** — lock, start the unlock, or withdraw, straight from a browser wallet or a Privy embedded wallet.
 
 Anyone can read the same data with any wallet or RPC — no account, no API key: `score(agent)` is a public view.

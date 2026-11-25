@@ -1,6 +1,14 @@
 # Changelog
 
 
+## 1.6.0 — Step 4: agent directory
+
+- The dapp leaderboard becomes a real directory: every agent discovered from
+  Tallied receipts on chain, ranked by counted score, with per-row receipt
+  counts, paid totals, flag markers and a link out to the explorer.
+- Address filter + discovery count ("N agents on chain · M flagged").
+  Tab and footer link renamed to Directory; the #/board route still works.
+
 ## 1.5.0 — Step 4: Python SDK
 
 - `sdk-python/` — `import tgentic` → `tg.verify(agent)`: counted score, receipts,

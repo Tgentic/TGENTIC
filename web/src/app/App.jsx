@@ -201,15 +201,16 @@ function Lookup({ param }) {
   );
 }
 
-/* ------------------------------- Leaderboard ------------------------------- */
+/* ------------------------------- Directory ------------------------------- */
 
 function Board() {
   const [st, retry] = useLoad(() => (api.deployed ? api.board() : Promise.resolve(null)), []);
+  const [q, setQ] = useState("");
   return (
     <div className="page">
       <div className="page-head">
         <PixelIcon name="tally" size={56} />
-        <div><h1>Leaderboard</h1><p className="hint">Ranked by counted score. Unique payers sit next to every score so one-payer agents are easy to spot.</p></div>
+        <div><h1>Agent directory</h1><p className="hint">Every agent discovered from Tallied receipts on chain, ranked by counted score. Unique payers sit next to every score so one-payer agents are easy to spot.</p></div>
       </div>
       {!api.deployed && <NotDeployed />}
       {api.deployed && st.s === "loading" && <Loading what="receipts" />}
@@ -217,24 +218,36 @@ function Board() {
       {api.deployed && st.s === "done" && (() => {
         const { tk, rows } = st.data;
         const ranked = rows.map((r) => ({ ...r, counted: r.bond >= tk.minBond })).sort((x, y) => Number((y.counted ? y.score : 0n) - (x.counted ? x.score : 0n)));
+        if (ranked.length === 0) return <p className="state">No receipts recorded yet. The directory fills as the verifier tallies payments.</p>;
         const top = ranked.find((r) => r.counted)?.score || 1n;
-        if (ranked.length === 0) return <p className="state">No receipts recorded yet. The board fills as the verifier tallies payments.</p>;
+        const needle = q.trim().toLowerCase();
+        const shown = needle ? ranked.filter((r) => r.a.toLowerCase().includes(needle)) : ranked;
         return (
-          <ol className="board">{ranked.map((r, i) => (
-            <li key={r.a} style={{ "--i": i }}>
-              <a className="board-row" href={`#/lookup/${r.a}`}>
-                <span className="rank mono">{String(i + 1).padStart(2, "0")}</span>
-                <Identicon address={r.a} size={32} />
-                <span className="mono">{short(r.a)}</span>
-                <PixelBar ratio={r.counted ? Number((r.score * 1000n) / top) / 1000 : 0} cells={20} label={r.counted ? `Score ${usd(r.score)}` : "Score hidden"} />
-                <span className="b-score">{r.counted ? usd(r.score) : <span className="warn-text">hidden</span>}</span>
-                <span className={`b-payers ${r.payers === 1n ? "warn-text" : ""}`}>
-                  {r.flags?.length > 0 && <span className="sig-dot" title={`Flagged: ${r.flags.join(", ")}`} aria-label={`Flagged: ${r.flags.join(", ")}`} />}
-                  {String(r.payers)} {r.payers === 1n ? "payer" : "payers"}
-                </span>
-              </a>
-            </li>
-          ))}</ol>
+          <>
+            <div className="dir-bar">
+              <p className="dir-count"><strong>{ranked.length}</strong> {ranked.length === 1 ? "agent" : "agents"} on chain{ranked.some((r) => r.flags?.length) ? ` · ${ranked.filter((r) => r.flags?.length).length} flagged` : ""}</p>
+              <input className="dir-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by address…" autoComplete="off" spellCheck="false" aria-label="Filter agents by address" />
+            </div>
+            {shown.length === 0 && <p className="state">No agent matches “{q}”.</p>}
+            <ol className="board">{shown.map((r, i) => (
+              <li key={r.a} style={{ "--i": i }}>
+                <a className="board-row" href={`#/lookup/${r.a}`}>
+                  <span className="rank mono">{String(ranked.indexOf(r) + 1).padStart(2, "0")}</span>
+                  <Identicon address={r.a} size={32} />
+                  <span className="mono">{short(r.a)}</span>
+                  <PixelBar ratio={r.counted ? Number((r.score * 1000n) / top) / 1000 : 0} cells={20} label={r.counted ? `Score ${usd(r.score)}` : "Score hidden"} />
+                  <span className="b-score">{r.counted ? usd(r.score) : <span className="warn-text">hidden</span>}</span>
+                  <span className="b-meta mono hide-sm">{String(r.receipts)} rcpt</span>
+                  <span className="b-meta mono hide-sm">{usd(r.paid)} paid</span>
+                  <span className={`b-payers ${r.payers === 1n ? "warn-text" : ""}`}>
+                    {r.flags?.length > 0 && <span className="sig-dot" title={`Flagged: ${r.flags.join(", ")}`} aria-label={`Flagged: ${r.flags.join(", ")}`} />}
+                    {String(r.payers)} {r.payers === 1n ? "payer" : "payers"}
+                  </span>
+                </a>
+                {api.explorer && <a className="dir-ext" href={`${api.explorer}/address/${r.a}`} target="_blank" rel="noreferrer" title="View on explorer" aria-label={`View ${r.a} on explorer`}>↗</a>}
+              </li>
+            ))}</ol>
+          </>
         );
       })()}
     </div>
@@ -415,7 +428,7 @@ export default function App() {
   };
   const privy = HAS_PRIVY ? { ready: p?.ready ?? false, authenticated: !!p?.authenticated, email, logout: () => p?.logout(), login: () => pl?.login() } : null;
   useEffect(() => mountLogoform(document.querySelector(".foot-field"), { mode: "band" }), []);
-  const tabs = [["lookup", "Lookup"], ["board", "Leaderboard"], ["bond", "Bond"]];
+  const tabs = [["lookup", "Lookup"], ["directory", "Directory"], ["bond", "Bond"]];
   return (
     <>
       <header className="nav">
@@ -432,7 +445,7 @@ export default function App() {
         <p className="demo-bar" role="note">Demo data. Sample agents and receipts so you can see the dapp working; none of it is on chain. <a href={location.pathname + location.hash}>Leave demo</a></p>
       )}
       <main className={SHOW_DEMO_LABEL ? "has-demo" : ""}>
-        {name === "board" ? <Board /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : <Lookup param={param} />}
+        {name === "board" || name === "directory" ? <Board /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : <Lookup param={param} />}
       </main>
       <footer className="foot" dangerouslySetInnerHTML={FOOT} />
     </>

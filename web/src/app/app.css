@@ -124,12 +124,20 @@ th { color: var(--mute); font-weight: 400; }
 td a { color: var(--blue-text); }
 .cell-id { display: inline-flex; align-items: center; gap: 8px; }
 
-/* leaderboard */
-.board-row { display: grid; grid-template-columns: 34px 32px 120px minmax(120px, 1fr) 120px 90px; gap: 18px; align-items: center; padding: 14px 12px; text-decoration: none; border-bottom: 1px solid var(--hair); }
+/* directory */
+.dir-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 18px 0 4px; }
+.dir-count { margin: 0; font: 400 .85rem var(--mono); color: var(--mute); }
+.dir-count strong { color: var(--text); font-weight: 400; }
+.dir-filter { flex: 0 1 260px; min-height: 40px; padding: 0 12px; }
+.board li { display: flex; align-items: center; }
+.board-row { display: grid; grid-template-columns: 34px 32px 110px minmax(100px, 1fr) 110px 64px 96px 84px; gap: 14px; align-items: center; padding: 14px 12px; text-decoration: none; border-bottom: 1px solid var(--hair); flex: 1; min-width: 0; }
 .board-row:hover { background: var(--panel); }
 .rank { color: var(--blue-text); }
 .b-score { font-size: 1.25rem; text-align: right; }
+.b-meta { font-size: .75rem; color: var(--mute); text-align: right; white-space: nowrap; }
 .b-payers { font: 400 .8rem var(--mono); color: var(--mute); text-align: right; }
+.dir-ext { color: var(--mute); text-decoration: none; font-family: var(--mono); padding: 0 0 0 12px; }
+.dir-ext:hover { color: var(--blue-text); }
 
 /* bond */
 .bond-page { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
@@ -151,6 +159,7 @@ td a { color: var(--blue-text); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats div:nth-child(3) { padding-left: 0; border-left: 0; }
   .board-row { grid-template-columns: 30px 32px minmax(0, 1fr) 110px; }
+  .board-row .b-meta { display: none; }
   .board-row .pbar, .board-row .b-payers { grid-column: 3 / -1; }
   .bond-page { grid-template-columns: minmax(0, 1fr); }
 }
@@ -176,5 +185,6 @@ td a { color: var(--blue-text); }
   .p-head .btn { grid-column: 1 / -1; justify-self: start; }
   .board-row { grid-template-columns: 26px 28px minmax(0, 1fr); gap: 10px; }
   .board-row .b-score { grid-column: 3; text-align: left; }
+  .dir-ext { display: none; }
   .bond-panel { padding: 20px; }
 }
