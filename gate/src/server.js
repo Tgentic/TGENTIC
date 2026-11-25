@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { GateError, handleTally } from "./core.js";
+import { assessAgent } from "./heuristics.js";
 
 const MAX_BODY = 4096;
 
@@ -37,8 +38,22 @@ function serveStatic(root, url, res) {
   stream.pipe(res);
 }
 
-/** Thin HTTP layer over handleTally: GET /health, POST /tally, + static dapp. */
-export function createServer(ctx, { allowedOrigin = "*", webDist = "" } = {}) {
+/** Thin HTTP layer over handleTally: GET /health, GET /risk, POST /tally, + static dapp.
+ *  ratePerMinute: application-layer request budget per IP (the chain sequences FCFS — no fee market to lean on). */
+export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMinute = 30 } = {}) {
+  const buckets = new Map(); // ip -> { count, windowStart } — fixed windows, swept on write
+  const allow = (ip) => {
+    const now = Date.now();
+    const b = buckets.get(ip);
+    if (!b || now - b.windowStart >= 60_000) {
+      buckets.set(ip, { count: 1, windowStart: now });
+      if (buckets.size > 10_000) { // keep the map bounded under address-spoof floods
+        for (const [k, v] of buckets) if (now - v.windowStart >= 60_000) buckets.delete(k);
+      }
+      return true;
+    }
+    return ++b.count <= ratePerMinute;
+  };
   return http.createServer(async (req, res) => {
     const send = (status, obj) => {
       res.writeHead(status, {
@@ -53,6 +68,24 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "" } = {}) {
 
     if (req.method === "OPTIONS") return send(204);
     if (req.method === "GET" && req.url === "/health") return send(200, { ok: true, chainId: ctx.chainId });
+
+    // Costly paths get an application-layer request budget — the chain sequences
+    // first-come-first-served, so there is no fee market to lean on.
+    if (req.method === "POST" && req.url === "/tally" || req.method === "GET" && req.url.startsWith("/risk")) {
+      if (!allow(req.socket.remoteAddress)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
+    }
+
+    if (req.method === "GET" && req.url.startsWith("/risk")) {
+      const agent = new URL(req.url, "http://x").searchParams.get("agent") ?? "";
+      if (!/^0x[0-9a-fA-F]{40}$/.test(agent)) return send(400, { error: "BAD_AGENT", message: "Send ?agent=0x… (an address)." });
+      try {
+        return send(200, await assessAgent(ctx.publicClient, { address: ctx.tgentic, agent, fromBlock: ctx.detectFromBlock }));
+      } catch (e) {
+        console.error("risk failed:", e?.shortMessage ?? e?.message ?? e);
+        return send(500, { error: "INTERNAL", message: "The risk read failed." });
+      }
+    }
+
     if (req.method !== "POST" || req.url !== "/tally") {
       if (webDist && req.method === "GET") return serveStatic(webDist, req.url, res);
       return send(404, { error: "NOT_FOUND" });

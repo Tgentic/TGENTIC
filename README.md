@@ -46,13 +46,13 @@ Anyone can read the same data with any wallet or RPC — no account, no API key:
 ## Repository layout
 
 ```
-contracts/        TGENTIC.sol (v1: tally + bond + slash), Receipts.sol + Policy.sol (v2: state/policy split, m-of-n verifiers), MockToken.sol (tests only)
+contracts/        TGENTIC.sol (v1: tally + bond + slash), Receipts.sol + Policy.sol (v2: state/policy split, m-of-n verifiers), Heuristics.sol (on-chain manipulation flags), MockToken.sol (tests only)
 gate/             verifier server: checks a USDG tx hash + payer signature, then tallies
 agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/* packages
 web/              landing + dapp (React, viem, Privy login)
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
-test/             contract tests (11) + gate tests (11) + policy tests (9)
+test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (9)
 tools/            context.py (one-call project briefing) + immune.py (security scanner)
 ```
 
@@ -62,7 +62,7 @@ Needs Node.js 20 or later.
 
 ```bash
 npm install
-npm test                    # 31 tests: contract + gate + policy on a local Hardhat network
+npm test                    # 40 tests: contract + gate + policy + heuristics on a local Hardhat network
 ```
 
 Run the dapp against a local node:
@@ -78,7 +78,7 @@ Run the gate:
 ```bash
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
-npm start               # :8788 — GET /health, POST /tally, serves web/dist
+npm start               # :8788 — GET /health, GET /risk?agent=0x…, POST /tally, serves web/dist
 ```
 
 Run the paid agent example:

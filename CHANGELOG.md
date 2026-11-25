@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 — 2026-11-24
+
+Roadmap Step 3, contract + gate layer: manipulation resistance.
+
+- **Heuristics.sol** — on-chain manipulation flags computed from the state
+  layer: single-payer and repeat-heavy concentration. Stateless view;
+  deployed on mainnet at 0xe9D4eaa0… over the v2 state layer.
+- **gate/src/heuristics.js** — event-based detection over the Tallied
+  history: payer concentration, timing regularity, amount cycling.
+  Exposed as GET /risk?agent=0x… (computeFlags is pure — usable from a
+  client, a log dump, or raw RPC).
+- Application-layer rate limiting on the costly endpoints (per-IP,
+  per-minute budget) — the chain sequences first-come-first-served, so
+  there is no fee market to lean on.
+- 9 new tests (40 total). Mainnet run: both detectors correctly report
+  the live state as not-a-pattern-yet (one receipt from one payer).
+
 ## 1.1.0 — 2026-11-24
 
 Roadmap Step 2, contract layer: decentralized trust.
