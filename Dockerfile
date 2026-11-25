@@ -3,6 +3,9 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci 2>/dev/null || npm install
 COPY web/ ./
+# The dapp shares the gate's pure detector — the import escapes web/ (../../../gate/src/),
+# so the file must exist in the build context at that path.
+COPY gate/src/flags.js /app/gate/src/flags.js
 ARG VITE_PRIVY_APP_ID
 ARG VITE_TGENTIC_ADDRESS
 ARG VITE_DEPLOY_BLOCK
