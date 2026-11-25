@@ -20,11 +20,19 @@ export const DEFAULT_FROM_BLOCK = 118987578n; // the v1 state layer's deploy blo
  */
 export async function assessAgent(publicClient, { address, agent, fromBlock = DEFAULT_FROM_BLOCK }) {
   const logs = await publicClient.getContractEvents({ address, abi: talliedAbi, eventName: "Tallied", args: { agent }, fromBlock });
-  return computeFlags(logs.map((l) => ({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount })), agent);
+  return computeFlags(logs.map((l) => ({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash })), agent);
 }
 
 /** Pure: the same heuristics over any receipt list — usable off a live client, a log dump, or raw RPC. */
 export function computeFlags(logs, agent) {
+  // The same payment can appear in two state layers (v1 + v2). Dedupe by the
+  // payment tx hash so a merged history never counts one payment twice.
+  const seen = new Map();
+  for (const l of logs) {
+    const key = l.txHash ? String(l.txHash).toLowerCase() : `log-${seen.size}`;
+    if (!seen.has(key)) seen.set(key, l);
+  }
+  logs = [...seen.values()];
   logs.sort((a, b) => (a.blockNumber < b.blockNumber ? -1 : 1));
 
   // payer concentration

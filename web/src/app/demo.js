@@ -1,6 +1,7 @@
 // DEMO data to preview the dapp as if it were live. Every number and address here is made up,
 // generated from seeded random values. The demo view always shows the "Demo data" label.
 import { getAddress } from "viem";
+import { flagsFor } from "./flags.js";
 
 let seed = 4663;
 const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -60,7 +61,10 @@ export const api = {
   readAgent: async (a) => { await sleep(700); return readAgentNow(a); },
   receipts: async (a) => { await sleep(500); return logs.filter((l) => l.args.agent.toLowerCase() === a.toLowerCase()).slice(-50).reverse(); },
   recent: async (n = 8) => { await sleep(600); return logs.slice(-n).reverse(); },
-  board: async () => { await sleep(900); return { tk: TOKEN, rows: agents.map((g) => ({ a: g.a, ...readAgentNow(g.a) })) }; },
+  board: async () => {
+    await sleep(900);
+    return { tk: TOKEN, rows: agents.map((g) => ({ a: g.a, ...readAgentNow(g.a), flags: flagsFor(g.a, logs.filter((l) => l.args.agent === g.a)).flags })) };
+  },
   hasWallet: () => true,
   connect: async () => { await sleep(700); return me.a; },
   bondState: async () => { await sleep(500); return { tk: TOKEN, d: readAgentNow(me.a), bal: wallet.bal, allow: wallet.allow }; },

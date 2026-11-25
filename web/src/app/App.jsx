@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatUnits, getAddress, isAddress, parseUnits } from "viem";
 import { api as chainApi } from "./chain.js";
+import { flagsFor, FLAG_TEXT } from "./flags.js";
 import { HAS_PRIVY } from "./privy.js";
 import { useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { api as demoApi } from "./demo.js";
@@ -116,6 +117,7 @@ function Profile({ a }) {
   const counted = d.bond >= tk.minBond;
   const payers = [...new Set(logs.map((l) => l.args.payer))];
   const ratio = tk.minBond > 0n ? Math.min(1, Number((d.bond * 1000n) / tk.minBond) / 1000) : 1;
+  const risk = logs.length ? flagsFor(a, logs) : null;
   return (
     <article className="profile" aria-label={`Tally for ${a}`}>
       <header className="p-head">
@@ -136,6 +138,20 @@ function Profile({ a }) {
         <div className={d.receipts > 0n && d.payers === 1n ? "flag" : ""}><dt>Unique payers</dt><dd>{String(d.payers)}</dd>{d.receipts > 0n && d.payers === 1n && <small>One payer only. Treat with care.</small>}</div>
         <div><dt>Bond</dt><dd>{tok(d.bond, tk.decimals)} <small>{tk.symbol}</small></dd></div>
       </dl>
+
+      {risk && (
+        <section className="block" aria-label="Manipulation signals">
+          <h2>Signals</h2>
+          <dl className="stats two">
+            <div><dt>Top payer share</dt><dd>{(risk.topPayerShareBps / 100).toFixed(0)}<small>%</small></dd></div>
+            <div className={risk.flagged ? "flag" : ""}><dt>Heuristic flags</dt><dd>{risk.flags.length || "none"}</dd></div>
+          </dl>
+          <ul className="sigs">
+            {risk.flags.map((f) => <li key={f}><span className="sig-tag">{f}</span>{FLAG_TEXT[f] || f}</li>)}
+          </ul>
+          <p className="hint">Signals are heuristics, not verdicts — they mark what deserves a closer look. The same detector runs in the gate at <code>/risk</code>.</p>
+        </section>
+      )}
 
       <section className="p-bond" aria-label="Bond against the minimum">
         <PixelBar ratio={ratio} cells={32} label={`Bond ${tok(d.bond, tk.decimals)} of ${tok(tk.minBond, tk.decimals)} ${tk.symbol} minimum`} />
@@ -212,7 +228,10 @@ function Board() {
                 <span className="mono">{short(r.a)}</span>
                 <PixelBar ratio={r.counted ? Number((r.score * 1000n) / top) / 1000 : 0} cells={20} label={r.counted ? `Score ${usd(r.score)}` : "Score hidden"} />
                 <span className="b-score">{r.counted ? usd(r.score) : <span className="warn-text">hidden</span>}</span>
-                <span className={`b-payers ${r.payers === 1n ? "warn-text" : ""}`}>{String(r.payers)} {r.payers === 1n ? "payer" : "payers"}</span>
+                <span className={`b-payers ${r.payers === 1n ? "warn-text" : ""}`}>
+                  {r.flags?.length > 0 && <span className="sig-dot" title={`Flagged: ${r.flags.join(", ")}`} aria-label={`Flagged: ${r.flags.join(", ")}`} />}
+                  {String(r.payers)} {r.payers === 1n ? "payer" : "payers"}
+                </span>
               </a>
             </li>
           ))}</ol>

@@ -43,7 +43,7 @@ SECRET_PATTERNS = [
 # JSON keys (transaction hashes are 32 bytes, the same shape as a private key).
 _HALF_ORDER = "7fffffffffffffffffffffffffffffff" + "5d576e7357a4501ddfe92f46681b20a0"
 SAFE_HEX_VALUES = {"0x" + _HALF_ORDER}
-JSON_IDENTIFIER_KEY = re.compile(r'"(receipts|policy|wire|deploy\w*|tx\w*|\w*hash\w*|\w*root|block\w*|proof\w*|verifier\w*)"\s*:')
+JSON_IDENTIFIER_KEY = re.compile(r'"(receipts|policy|wire|heuristic\w*|deploy\w*|tx\w*|\w*hash\w*|\w*root|block\w*|proof\w*|verifier\w*)"\s*:')
 
 
 def is_false_positive_hex(value, line):

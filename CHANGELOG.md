@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.0 — 2026-11-25
+
+Roadmap Step 3, completion: flags in the dapp + the decay design note.
+
+- **web**: agent profiles now show a Signals section — top payer share
+  and the heuristic flags, computed client-side with the same
+  `computeFlags` the gate exposes at `/risk`. Flagged agents carry a
+  marker on the leaderboard.
+- **gate/src/heuristics.js**: cross-layer dedupe moved into
+  `computeFlags` itself — a payment appearing in both the v1 and v2
+  histories is counted once, keyed on the payment tx hash.
+- **docs/time-weighted-scoring.md** — the reputation-decay design note:
+  epoch-bucketed weighting at read time, receipts immutable, the raw
+  sum untouched. Design only; nothing deployed.
+- **deployments/4663-v3.json** — the Heuristics mainnet record
+  (0xe9D4eaa0…, deploy tx + block).
+- 1 new test (41 total): the same payment tx in two state layers is
+  deduped to a single receipt and is not a pattern.
+
 ## 1.2.0 — 2026-11-24
 
 Roadmap Step 3, contract + gate layer: manipulation resistance.

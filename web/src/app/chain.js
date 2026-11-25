@@ -2,6 +2,7 @@
 import { createPublicClient, createWalletClient, custom, defineChain, http, isAddress } from "viem";
 import abi from "./abi.json";
 import { HAS_PRIVY } from "./privy.js";
+import { flagsFor } from "./flags.js";
 
 const env = import.meta.env;
 const ADDRESS = env.VITE_TGENTIC_ADDRESS || "";
@@ -62,7 +63,11 @@ export const api = {
     const logs = await tallied();
     const agents = [...new Set(logs.map((l) => l.args.agent))].slice(0, 100);
     const tk = await readToken();
-    const rows = await Promise.all(agents.map(async (a) => ({ a, ...(await readAgent(a)) })));
+    const rows = await Promise.all(agents.map(async (a) => ({
+      a,
+      ...(await readAgent(a)),
+      flags: flagsFor(a, logs.filter((l) => l.args.agent === a)).flags,
+    })));
     return { tk, rows };
   },
   hasWallet: () => typeof window !== "undefined" && (!!window.ethereum || HAS_PRIVY),

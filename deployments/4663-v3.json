@@ -1,0 +1,13 @@
+{
+  "chainId": 4663,
+  "line": "v3",
+  "rpc": "https://rpc.mainnet.chain.robinhood.com",
+  "heuristics": "0xe9D4eaa060Eb0E7EEE599c026C217e3b06082d47",
+  "receipts": "0x23537F09062134e6cfD8FF8D0a49b263D93bdB27",
+  "deployer": "0x5e287bdcef1cE5855864F1a251C8a3853bfC6982",
+  "deployTxs": {
+    "heuristics": "0x23f60672d21e9a10a410c2977848abc183f47d6499512d48456533f1c41e617c"
+  },
+  "deployBlock": 123048047,
+  "notes": "Heuristics is a stateless view over the Receipts state layer: anyone can call assess(agent) on chain, and anyone can deploy their own instance pointed at their own Receipts contract."
+}

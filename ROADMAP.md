@@ -40,8 +40,8 @@ recorded through the policy.*
 
 - [x] Automated wash-trading detection: payer concentration, timing patterns, amount cycling — live on mainnet (Heuristics 0xe9D4eaa0… over the v2 state layer, plus the gate's event-based detector)
 - [x] Application-layer rate limiting and request budgets — the chain sequences first-come-first-served, so there is no fee market to lean on
-- [ ] Heuristic flags surfaced in the dapp (unique-payer ratio is step zero; expand it)
-- [ ] Research: time-weighted scoring / reputation decay — design note before code
+- [x] Heuristic flags surfaced in the dapp — the profile view runs the same computeFlags the gate exposes at /risk, and flagged agents carry a marker on the leaderboard
+- [x] Research: time-weighted scoring / reputation decay — design note before code (docs/time-weighted-scoring.md)
 
 **Done means:** obvious self-dealing gets flagged automatically, and the
 gate survives hostile traffic patterns.

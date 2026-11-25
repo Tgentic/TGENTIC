@@ -52,7 +52,8 @@ agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/
 web/              landing + dapp (React, viem, Privy login)
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
-test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (9)
+test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (10)
+docs/             design notes — the thinking before the code (time-weighted scoring, …)
 tools/            context.py (one-call project briefing) + immune.py (security scanner)
 ```
 
@@ -110,7 +111,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 
 1. **Foundation** — shipped (v1.0.1)
 2. **Decentralized trust** — shipped on mainnet: state/policy split, 2-of-3 verifiers, evidence-based slashing
-3. **Manipulation resistance** — wash-trading detection, application-layer rate limiting, dapp flags
+3. **Manipulation resistance** — shipped on mainnet: on-chain flags (Heuristics 0xe9D4eaa0…), event-based detection at /risk, rate limiting, dapp signals
 4. **Integration** — TypeScript/Python SDKs, ERC-8004 registry, agent directory
 5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
 6. **Agent identity** — signed agent manifests, identity-to-score resolution, key rotation

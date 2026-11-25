@@ -110,6 +110,12 @@ input:disabled { opacity: .55; }
 .payers { display: flex; flex-wrap: wrap; gap: 6px; }
 .payers li { line-height: 0; }
 
+/* manipulation signals (heuristics, not verdicts) */
+.sigs { margin: 14px 0 0; padding: 0; list-style: none; }
+.sigs li { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: .95rem; }
+.sig-tag { flex: 0 0 auto; font: 400 .78rem var(--mono); color: #f4c76b; border: 1px solid #f4c76b; padding: 2px 8px; }
+.sig-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; background: #f4c76b; vertical-align: baseline; }
+
 /* receipt table */
 .scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font: 400 .85rem/1.4 var(--mono); }

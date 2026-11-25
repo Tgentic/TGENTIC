@@ -88,6 +88,18 @@ describe("heuristics (Step 3: manipulation resistance)", function () {
       expect(r.topPayer).to.equal(payer.address.toLowerCase());
       expect(r.topAmount).to.equal("777000");
     });
+
+    it("dedupes the same payment across two state layers by tx hash", async () => {
+      const { computeFlags } = require("../gate/src/heuristics.js");
+      const txHash = ethers.id("shared-payment");
+      // The same payment represented once in v1 and once in v2 history —
+      // different log entries, identical payment tx hash.
+      const l1 = { blockNumber: 10n, payer: payer.address, amount: 5n, txHash };
+      const l2 = { blockNumber: 20n, payer: payer.address, amount: 5n, txHash };
+      const r = computeFlags([l1, l2], agent.address);
+      expect(r.receipts).to.equal(1); // one payment, not two
+      expect(r.flagged).to.equal(false); // a single receipt is not a pattern
+    });
   });
 
   describe("HTTP: /risk and the request budget", function () {
