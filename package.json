@@ -22,5 +22,11 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tgentic/TGENTIC.git"
+  },
+  "homepage": "https://www.tgentic.xyz",
+  "bugs": "https://github.com/Tgentic/TGENTIC/issues"
 }

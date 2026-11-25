@@ -23,13 +23,15 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # What each part of the repository is, in one line each.
 COMPONENTS = {
-    "contracts": "Solidity: TGENTIC.sol (tally + bond + slash) and MockToken.sol (tests only).",
-    "gate": "Node verifier service: checks a USDG tx hash on chain, verifies the payer's signature, then tallies. Serves web/dist in the single-container deploy.",
+    "contracts": "Solidity: TGENTIC.sol (v1 tally + bond + slash), Receipts.sol + Policy.sol (v2 state/policy split, m-of-n verifiers), Heuristics.sol (on-chain manipulation flags), MockToken.sol (tests only).",
+    "gate": "Node verifier service: checks a USDG tx hash on chain, verifies the payer's signature, then tallies. Serves web/dist in the single-container deploy. Exposes /risk (manipulation signals) with a per-IP request budget.",
     "agent-example": "A minimal x402-paid agent (express + official @x402/* packages) that charges USDG per job.",
-    "web": "Landing page + dapp (React, viem, Privy login): lookup, leaderboard, bond.",
-    "test": "Hardhat suites: contract behavior and the gate's HTTP + verification paths.",
-    "scripts": "Deploy scripts (mainnet 4663 / testnet 46630) and a full testnet demo flow.",
-    "deployments": "Addresses written by the deploy scripts, one JSON per chain.",
+    "web": "Landing page + dapp (React, viem, Privy login): lookup, leaderboard, bond, manipulation Signals.",
+    "sdk": "@tgentic/sdk — read and verify an agent's score from JS/TS (score, receipts, risk, verify). Also the canonical home of the shared pure detector (src/flags.js).",
+    "docs": "Design notes — the thinking before the code (time-weighted scoring, …).",
+    "test": "Hardhat suites: contract behavior, the policy layer, heuristics, the gate's HTTP paths, and the SDK.",
+    "scripts": "Deploy scripts (mainnet 4663 / testnet 46630), the v2 deployment, and a full testnet demo flow.",
+    "deployments": "Addresses written by the deploy scripts, one JSON per chain/line (4663 v1, 4663-v2, 4663-v3).",
     "tools": "Repo tooling: immune.py (security scan) and this context briefing.",
 }
 
@@ -38,8 +40,10 @@ FLOW = [
     "client asks an agent for a job -> agent answers HTTP 402: pay first (x402)",
     "payer signs a gasless USDG transfer -> facilitator settles it -> tx hash",
     "payer signs a 1-5 rating over (chain, agent, tx, rating)",
-    "gate verifies the tx on chain + the signature -> tally(agent, payer, tx, amount, rating)",
+    "v1 path: gate verifies the tx on chain + the signature -> tally(agent, payer, tx, amount, rating)",
+    "v2 path: 2-of-3 verifiers sign a domain-separated digest -> Policy.submitTally records on the Receipts state layer (deployed on mainnet; the dapp still reads v1 until cut over)",
     "score is only readable while the agent's bond stays at or above minBond",
+    "manipulation signals: computeFlags over the receipt history — same pure function in the gate (/risk), the dapp (Signals), the SDK, and on chain (Heuristics.sol)",
 ]
 
 SKIP_DIRS = {".git", "node_modules", "dist", "cache", "artifacts", "__pycache__", ".github"}

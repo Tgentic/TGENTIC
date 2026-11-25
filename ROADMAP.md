@@ -36,7 +36,7 @@ change without touching state. *Shipped: deployed on mainnet
 (deployments/4663-v2.json, 2-of-3 verifier set) and the first tally was
 recorded through the policy.*
 
-## Step 3 — Manipulation resistance
+## Step 3 — Manipulation resistance (shipped on mainnet)
 
 - [x] Automated wash-trading detection: payer concentration, timing patterns, amount cycling — live on mainnet (Heuristics 0xe9D4eaa0… over the v2 state layer, plus the gate's event-based detector)
 - [x] Application-layer rate limiting and request budgets — the chain sequences first-come-first-served, so there is no fee market to lean on
@@ -44,7 +44,9 @@ recorded through the policy.*
 - [x] Research: time-weighted scoring / reputation decay — design note before code (docs/time-weighted-scoring.md)
 
 **Done means:** obvious self-dealing gets flagged automatically, and the
-gate survives hostile traffic patterns.
+gate survives hostile traffic patterns. *Shipped: deployed on mainnet
+(deployments/4663-v3.json) and callable by anyone — plus the same pure
+detector in the gate at /risk, the dapp and the SDK.*
 
 ## Step 4 — Integration
 
