@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatUnits, getAddress, isAddress, parseUnits } from "viem";
 import { api as chainApi } from "./chain.js";
 import { flagsFor, FLAG_TEXT } from "./flags.js";
+import { erc8004Of, EXPLORER } from "./erc8004.js";
 import { HAS_PRIVY } from "./privy.js";
 import { useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { api as demoApi } from "./demo.js";
@@ -150,7 +151,23 @@ function Profile({ a }) {
         <div><dt>Bond</dt><dd>{tok(d.bond, tk.decimals)} <small>{tk.symbol}</small></dd></div>
       </dl>
 
-      <p className="hint">Composes with the <a href="https://robinhoodchain.blockscout.com/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" target="_blank" rel="noreferrer">ERC-8004 trust registry ↗</a> — agents registered in the standard can carry TGENTIC's payment-proven feedback.</p>
+      {erc8004Of(a) ? (
+        <section className="block" aria-label="ERC-8004 registration">
+          <h2>ERC-8004 proof</h2>
+          <dl className="stats two">
+            <div><dt>agentId</dt><dd>#{erc8004Of(a).agentId}</dd></div>
+            <div><dt>Registry</dt><dd><a href={`${EXPLORER}/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`} target="_blank" rel="noreferrer">official ↗</a></dd></div>
+          </dl>
+          <ul className="sigs">
+            <li><span className="mono mute">register</span> <a className="mono" href={`${EXPLORER}/tx/${erc8004Of(a).registerTx}`} target="_blank" rel="noreferrer">{short(erc8004Of(a).registerTx)}</a></li>
+            {erc8004Of(a).feedbackTxs.map((h) => (
+              <li key={h}><span className="mono mute">feedback · proofOfPayment</span> <a className="mono" href={`${EXPLORER}/tx/${h}`} target="_blank" rel="noreferrer">{short(h)}</a></li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <p className="hint">Composes with the <a href="https://robinhoodchain.blockscout.com/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" target="_blank" rel="noreferrer">ERC-8004 trust registry ↗</a> — agents registered in the standard can carry TGENTIC's payment-proven feedback.</p>
+      )}
 
       {risk && (
         <section className="block" aria-label="Manipulation signals">
@@ -248,6 +265,7 @@ function Board() {
                   <span className="rank mono">{String(ranked.indexOf(r) + 1).padStart(2, "0")}</span>
                   <Identicon address={r.a} size={32} />
                   <span className="mono">{short(r.a)}</span>
+                  {erc8004Of(r.a) && <a className="e8-chip mono" href={`${EXPLORER}/token/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432?tab=token_holders`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title={`ERC-8004 agentId ${erc8004Of(r.a).agentId} — official trust registry`}>8004</a>}
                   <PixelBar ratio={r.counted ? Number((r.score * 1000n) / top) / 1000 : 0} cells={20} label={r.counted ? `Score ${usd(r.score)}` : "Score hidden"} />
                   <span className="b-score">{r.counted ? usd(r.score) : <span className="warn-text">hidden</span>}</span>
                   <span className="b-meta mono hide-sm">{String(r.receipts)} rcpt</span>

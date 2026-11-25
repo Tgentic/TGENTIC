@@ -192,3 +192,7 @@ td a { color: var(--blue-text); }
 /* Pulsing "live" marker on auto-refreshing views. */
 .live { display: inline-block; font: 700 .62rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--blue-text); border: 1px solid var(--blue-text); border-radius: 4px; padding: 2px 6px; vertical-align: middle; margin-left: 8px; animation: live-pulse 2.4s ease-in-out infinite; }
 @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ERC-8004 registry chip on directory rows + proof section helpers. */
+.e8-chip { font: 700 .58rem/1 var(--mono); letter-spacing: .06em; color: var(--blue-text); border: 1px solid var(--blue-text); border-radius: 4px; padding: 2px 5px; margin-left: 6px; text-decoration: none; }
+.e8-chip:hover { background: var(--panel); }
