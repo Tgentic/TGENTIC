@@ -123,6 +123,14 @@ describe("heuristics (Step 3: manipulation resistance)", function () {
       expect((await get("/risk?agent=0x1")).status).to.equal(400);
     });
 
+    it("normalizes any address casing (no 500 on a wrong-checksum address)", async () => {
+      // Explorers accept any casing; a pasted wrong-checksum address must not 500.
+      const res = await get(`/risk?agent=${agent.address.toUpperCase().replace("0X", "0x")}`);
+      expect(res.status).to.equal(200);
+      const j = await res.json();
+      expect(j).to.have.property("receipts");
+    });
+
     it("enforces the per-minute request budget (burst -> 429)", async () => {
       const codes = [];
       for (let i = 0; i < 5; i++) codes.push((await get(`/risk?agent=${agent.address}`)).status);

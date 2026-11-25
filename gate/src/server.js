@@ -1,6 +1,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { getAddress } from "viem";
 import { GateError, handleTally } from "./core.js";
 import { assessAgent } from "./heuristics.js";
 
@@ -79,7 +80,9 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       const agent = new URL(req.url, "https://x").searchParams.get("agent") ?? "";
       if (!/^0x[0-9a-fA-F]{40}$/.test(agent)) return send(400, { error: "BAD_AGENT", message: "Send ?agent=0x… (an address)." });
       try {
-        return send(200, await assessAgent(ctx.publicClient, { address: ctx.tgentic, agent, fromBlock: ctx.detectFromBlock }));
+        // Normalize casing the way explorers do — viem rejects a mixed-case address
+        // whose EIP-55 checksum doesn't match, which made those queries a 500.
+        return send(200, await assessAgent(ctx.publicClient, { address: ctx.tgentic, agent: getAddress(agent.toLowerCase()), fromBlock: ctx.detectFromBlock }));
       } catch (e) {
         console.error("risk failed:", e?.shortMessage ?? e?.message ?? e);
         return send(500, { error: "INTERNAL", message: "The risk read failed." });

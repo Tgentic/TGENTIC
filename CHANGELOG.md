@@ -1,6 +1,11 @@
 # Changelog
 
 
+## 1.6.1 — /risk accepts any address casing
+
+- Fixed a public-UX bug: a mixed-case address whose EIP-55 checksum didn't match
+  got a 500 from /risk. The gate now normalizes casing (like explorers) —
+  regression test covers it.
 ## 1.6.0 — Step 4: agent directory
 
 - The dapp leaderboard becomes a real directory: every agent discovered from
