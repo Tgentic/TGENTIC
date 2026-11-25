@@ -33,7 +33,7 @@ COMPONENTS = {
     "test": "Hardhat suites: contract behavior, the policy layer, heuristics, the gate's HTTP paths, and the SDK.",
     "scripts": "Deploy scripts (mainnet 4663 / testnet 46630), the v2 deployment, and a full testnet demo flow.",
     "deployments": "Addresses written by the deploy scripts, one JSON per chain/line (4663 v1, 4663-v2, 4663-v3).",
-    "tools": "Repo tooling: immune.py (security scan) and this context briefing.",
+    "tools": "Repo tooling: immune.py (security scan), watch-receipts.py (live Tallied monitor), and this context briefing.",
 }
 
 # How the pieces connect, in payment order.

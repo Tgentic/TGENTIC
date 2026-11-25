@@ -30,13 +30,24 @@ function useRoute() {
   return r;
 }
 
-/** Run an async function and track its state: loading | error | done. */
-function useLoad(fn, deps) {
+/** Run an async function and track its state: loading | error | done.
+ *  With pollMs, silently refetch on an interval — no loader flash, and a failed
+ *  poll keeps the last good data on screen instead of blanking the view. */
+function useLoad(fn, deps, pollMs) {
   const [st, setSt] = useState({ s: "loading" });
-  const run = () => { setSt({ s: "loading" }); fn().then((data) => setSt({ s: "done", data }), (e) => setSt({ s: "error", text: msg(e) })); };
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  const run = () => { setSt({ s: "loading" }); fnRef.current().then((data) => setSt({ s: "done", data }), (e) => setSt({ s: "error", text: msg(e) })); };
   useEffect(run, deps);
+  useEffect(() => {
+    if (!pollMs) return undefined;
+    const t = setInterval(() => fnRef.current().then((data) => setSt({ s: "done", data }), () => {}), pollMs);
+    return () => clearInterval(t);
+  }, [pollMs, ...deps]);
   return [st, run];
 }
+
+const POLL_MS = 30000;
 
 const Loading = ({ what }) => <div className="state loading" role="status"><MarkLoader /><span>Reading {what} from the chain…</span></div>;
 const Failed = ({ text, retry }) => (
@@ -82,10 +93,10 @@ function Search() {
 }
 
 function Recent() {
-  const [st, retry] = useLoad(() => api.recent(8), []);
+  const [st, retry] = useLoad(() => api.recent(8), [], POLL_MS);
   return (
     <section className="block" aria-labelledby="h-recent">
-      <h2 id="h-recent">Latest receipts</h2>
+      <h2 id="h-recent">Latest receipts <span className="live">live</span></h2>
       {st.s === "loading" && <Loading what="receipts" />}
       {st.s === "error" && <Failed text={st.text} retry={retry} />}
       {st.s === "done" && (st.data.length === 0 ? <p className="state">No receipts yet. They appear here as the verifier tallies payments.</p> : (
@@ -110,7 +121,7 @@ function Profile({ a }) {
   const [st, retry] = useLoad(async () => {
     const [d, tk, logs] = await Promise.all([api.readAgent(a), api.readToken(), api.receipts(a)]);
     return { d, tk, logs };
-  }, [a]);
+  }, [a], POLL_MS);
   if (st.s === "loading") return <Loading what="this agent" />;
   if (st.s === "error") return <Failed text={st.text} retry={retry} />;
   const { d, tk, logs } = st.data;
@@ -204,7 +215,7 @@ function Lookup({ param }) {
 /* ------------------------------- Directory ------------------------------- */
 
 function Board() {
-  const [st, retry] = useLoad(() => (api.deployed ? api.board() : Promise.resolve(null)), []);
+  const [st, retry] = useLoad(() => (api.deployed ? api.board() : Promise.resolve(null)), [], POLL_MS);
   const [q, setQ] = useState("");
   return (
     <div className="page">
@@ -225,7 +236,7 @@ function Board() {
         return (
           <>
             <div className="dir-bar">
-              <p className="dir-count"><strong>{ranked.length}</strong> {ranked.length === 1 ? "agent" : "agents"} on chain{ranked.some((r) => r.flags?.length) ? ` · ${ranked.filter((r) => r.flags?.length).length} flagged` : ""}</p>
+              <p className="dir-count"><strong>{ranked.length}</strong> {ranked.length === 1 ? "agent" : "agents"} on chain <span className="live">live</span>{ranked.some((r) => r.flags?.length) ? ` · ${ranked.filter((r) => r.flags?.length).length} flagged` : ""}</p>
               <input className="dir-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by address…" autoComplete="off" spellCheck="false" aria-label="Filter agents by address" />
             </div>
             {shown.length === 0 && <p className="state">No agent matches “{q}”.</p>}

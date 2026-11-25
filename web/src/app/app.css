@@ -188,3 +188,7 @@ td a { color: var(--blue-text); }
   .dir-ext { display: none; }
   .bond-panel { padding: 20px; }
 }
+
+/* Pulsing "live" marker on auto-refreshing views. */
+.live { display: inline-block; font: 700 .62rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--blue-text); border: 1px solid var(--blue-text); border-radius: 4px; padding: 2px 6px; vertical-align: middle; margin-left: 8px; animation: live-pulse 2.4s ease-in-out infinite; }
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
