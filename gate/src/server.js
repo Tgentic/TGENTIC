@@ -76,7 +76,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     }
 
     if (req.method === "GET" && req.url.startsWith("/risk")) {
-      const agent = new URL(req.url, "http://x").searchParams.get("agent") ?? "";
+      const agent = new URL(req.url, "https://x").searchParams.get("agent") ?? "";
       if (!/^0x[0-9a-fA-F]{40}$/.test(agent)) return send(400, { error: "BAD_AGENT", message: "Send ?agent=0x… (an address)." });
       try {
         return send(200, await assessAgent(ctx.publicClient, { address: ctx.tgentic, agent, fromBlock: ctx.detectFromBlock }));
