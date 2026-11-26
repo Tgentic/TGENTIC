@@ -40,6 +40,27 @@ gate, dapp and SDK), `gate/src/core.js` (payment + signature verification).
 Both fixes are in the canonical detector — gate `/risk`, dapp and SDK share
 this one file, so all surfaces stay consistent.
 
+### Fixed during the pre-cutover deep pass (gate HTTP layer)
+
+- **F3 — aborted request body crashed the gate process** (`gate/src/server.js`).
+  `for await (const chunk of req)` rejects when a client disconnects mid-body;
+  inside the async request handler that rejection was unhandled, and Node's
+  default is to exit on unhandled rejections — a remote, unauthenticated
+  single-packet DoS. Reproduced locally, then fixed: the body read is wrapped
+  and an abort just returns. Regression test: `test/gate.js` "an aborted
+  request body must not crash the process".
+- **F4 — rate limit bucketed on the proxy IP, not the client** (`server.js`).
+  Behind Railway's edge, `req.socket.remoteAddress` is the proxy — every user
+  shared one 30/min budget (one client could starve everyone, or the limit was
+  meaningless). Fixed: bucket key is the first `X-Forwarded-For` entry, which
+  the edge overwrites; direct header spoofing is not reachable publicly.
+  Regression test: per-IP buckets.
+- **F5 — route matching ignored the query string / over-matched prefixes**
+  (`server.js`). `req.url === "/tally"` sent `POST /tally?x=1` to the static
+  handler (404), while `/riskfoo` matched the `/risk` prefix check. Fixed:
+  routing now uses the parsed pathname with exact matches. Regression test
+  covers both.
+
 ### Informational (documented, not fixed — for the external reviewer)
 
 - **I1 — CEI ordering in `deposit()`.** The external `transferFrom` call
@@ -61,6 +82,20 @@ this one file, so all surfaces stay consistent.
   (`Receipts` + `Policy`, 2-of-3 verifiers) is deployed and has recorded a
   tally, but the dapp/SDK/`/risk` still read v1 — cutover pending. This is
   the biggest known trust assumption and the reason step 5 exists.
+- **I6 — `used[txHash]` is global per transaction hash.** A facilitator
+  transaction that pays two different agents can only produce one tally; the
+  second agent's receipt is rejected `AlreadyTallied`. Current facilitators
+  settle one payment per tx, so this is latent — but a batching facilitator
+  would silently drop receipts. Revisit at cutover: keying `used` by
+  `(agent, txHash)` would require a new Receipts deployment.
+- **I7 — restored session address without a live wallet client.** After a
+  reload, `sessionStorage` restores the address but the injected-wallet
+  `walletClient` is gone until reconnect; a bond action then fails with a
+  generic wallet error rather than prompting reconnect. UX-only, no funds at
+  risk (transactions are signed by the user's wallet regardless).
+- **I8 — leaderboard/board reads are O(agents) event scans.** `top()` /
+  `board()` re-scan `Tallied` history per agent for flags. Correct but heavy;
+  the long-term answer is an indexer, already on the step-5 list.
 
 ## Fuzz campaign results
 

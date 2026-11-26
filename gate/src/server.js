@@ -55,6 +55,14 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     }
     return ++b.count <= ratePerMinute;
   };
+  // The socket peer is the edge proxy in production (Railway), so the real client
+  // IP comes from X-Forwarded-For. The service is only reachable through that proxy,
+  // which overwrites the header — direct header spoofing is not possible publicly.
+  const clientIp = (req) => {
+    const xff = req.headers["x-forwarded-for"];
+    return (typeof xff === "string" && xff.split(",")[0].trim()) || req.socket.remoteAddress;
+  };
+
   return http.createServer(async (req, res) => {
     const send = (status, obj) => {
       res.writeHead(status, {
@@ -70,13 +78,16 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     if (req.method === "OPTIONS") return send(204);
     if (req.method === "GET" && req.url === "/health") return send(200, { ok: true, chainId: ctx.chainId });
 
+    // Route on the pathname only — a query string must not change matching.
+    const pathname = req.url.split("?")[0];
+
     // Costly paths get an application-layer request budget — the chain sequences
     // first-come-first-served, so there is no fee market to lean on.
-    if (req.method === "POST" && req.url === "/tally" || req.method === "GET" && req.url.startsWith("/risk")) {
-      if (!allow(req.socket.remoteAddress)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
+    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && pathname === "/risk")) {
+      if (!allow(clientIp(req))) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 
-    if (req.method === "GET" && req.url.startsWith("/risk")) {
+    if (req.method === "GET" && pathname === "/risk") {
       const agent = new URL(req.url, "https://x").searchParams.get("agent") ?? "";
       if (!/^0x[0-9a-fA-F]{40}$/.test(agent)) return send(400, { error: "BAD_AGENT", message: "Send ?agent=0x… (an address)." });
       try {
@@ -89,15 +100,19 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       }
     }
 
-    if (req.method !== "POST" || req.url !== "/tally") {
+    if (req.method !== "POST" || pathname !== "/tally") {
       if (webDist && req.method === "GET") return serveStatic(webDist, req.url, res);
       return send(404, { error: "NOT_FOUND" });
     }
 
     let raw = "";
-    for await (const chunk of req) {
-      raw += chunk;
-      if (raw.length > MAX_BODY) return send(413, { error: "BODY_TOO_LARGE" });
+    try {
+      for await (const chunk of req) {
+        raw += chunk;
+        if (raw.length > MAX_BODY) return send(413, { error: "BODY_TOO_LARGE" });
+      }
+    } catch {
+      return; // client aborted mid-body — the socket is already gone, nothing to answer
     }
     let body;
     try { body = JSON.parse(raw); } catch { return send(400, { error: "BAD_JSON", message: "Body must be JSON." }); }

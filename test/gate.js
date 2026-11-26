@@ -142,4 +142,60 @@ describe("gate", function () {
       server.close();
     }
   });
+
+  it("HTTP: an aborted request body must not crash the process", async () => {
+    const net = require("node:net");
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const port = server.address().port;
+    try {
+      // send a partial body then destroy the socket mid-stream — the async
+      // body reader rejects; before the fix that was an unhandled rejection
+      // and Node's default is to crash the process.
+      await new Promise((resolve) => {
+        const s = net.connect(port, "127.0.0.1", () => {
+          s.write("POST /tally HTTP/1.1\r\nHost: x\r\nContent-Length: 100000\r\n\r\n{\"partial\":");
+          setTimeout(() => { s.destroy(); resolve(); }, 50);
+        });
+      });
+      await new Promise((r) => setTimeout(r, 200));
+      expect((await fetch(`http://127.0.0.1:${port}/health`)).status).to.equal(200);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("HTTP: rate limit buckets by X-Forwarded-For client IP, not the proxy", async () => {
+    const server = srv.createServer(ctx, { ratePerMinute: 2 }).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const post = (xff) => fetch(`${base}/tally`, {
+      method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": xff }, body: "{}",
+    });
+    try {
+      expect((await post("1.1.1.1")).status).to.equal(400); // BAD_INPUT — budget consumed
+      expect((await post("1.1.1.1")).status).to.equal(400);
+      expect((await post("1.1.1.1")).status).to.equal(429); // third request from same IP: limited
+      expect((await post("2.2.2.2")).status).to.equal(400); // a different client IP has its own budget
+    } finally {
+      server.close();
+    }
+  });
+
+  it("HTTP: query strings do not change routing; /riskfoo is not /risk", async () => {
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      // /tally?x=1 must still reach the tally handler (was a 404 before the pathname fix)
+      const r = await fetch(`${base}/tally?x=1`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+      expect(r.status).to.equal(400);
+      expect((await r.json()).error).to.equal("BAD_INPUT");
+      // prefix paths that merely start with /risk must not hit the risk handler
+      expect((await fetch(`${base}/riskfoo`)).status).to.equal(404);
+      expect((await fetch(`${base}/risk?agent=notanaddress`)).status).to.equal(400);
+    } finally {
+      server.close();
+    }
+  });
 });
