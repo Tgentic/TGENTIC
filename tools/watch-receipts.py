@@ -55,7 +55,8 @@ def rpc_call(rpc, method, params):
 
 def scan(rpc, contract, from_block):
     """Chunked eth_getLogs: blockNumber snapshot as toBlock, windows under
-    the RPC's ~10M-block cap, halving a window on range errors."""
+    the RPC's ~10M-block cap, halving a window on range errors.
+    Returns (logs, latest_block)."""
     latest = int(rpc_call(rpc, "eth_blockNumber", []), 16)
     logs = []
     cursor = from_block
@@ -76,7 +77,7 @@ def scan(rpc, contract, from_block):
                 end = cursor + (end - cursor) // 2
         logs.extend(page)
         cursor = end + 1
-    return logs
+    return logs, latest
 
 
 def describe(log, known):
@@ -104,13 +105,15 @@ def main():
     a = ap.parse_args()
     known = {p.strip().lower() for p in a.known.split(",") if p.strip()}
     seen = set()
+    cursor = a.from_block  # first poll scans history; later polls are incremental
 
     print(f"watching {a.contract} from block {a.from_block} ({'once' if a.once else f'every {a.interval:g}s'})")
     print(f"known team payers: {len(known)} — anything else prints as EXTERNAL")
     try:
         while True:
             try:
-                logs = scan(a.rpc, a.contract, a.from_block)
+                logs, latest = scan(a.rpc, a.contract, cursor)
+                cursor = latest + 1  # everything through `latest` was just fetched
             except Exception as e:
                 print(f"poll failed: {e}", file=sys.stderr)
                 logs = []
