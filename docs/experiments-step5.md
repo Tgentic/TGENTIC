@@ -131,3 +131,11 @@ execution is covered by the Hardhat suite. Details in
   evidence of absence of vulnerabilities elsewhere.
 - EXP-D's deadline was a projection at measurement time; the fix removes
   the dependency on that projection entirely.
+
+## Follow-ups produced by this log
+
+- `docs/external-review-brief.md` — intake package for an external audit.
+- `docs/multi-chain-design.md` — chain-binding design (EXP-B follow-up).
+- `docs/cutover-v1-v2.md` — the v1→v2 migration plan, including the
+  on-chain state inventory (v2 holds 1 tally / 0 bonds; v1 holds all 8
+  tallies / 3.50 USDG bonded) and the replay-based Option B.
