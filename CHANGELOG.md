@@ -1,6 +1,35 @@
 # Changelog
 
 
+## 1.8.0 — 2026-11-26
+
+Roadmap Step 5 (assurance & scale), everything completable from inside:
+
+- **Log-range scale fix**: all five read surfaces (dapp, gate `/risk`,
+  TS SDK, Python SDK, receipt watcher) now page event scans — the public
+  RPC's ~10M-block `eth_getLogs` cap would have broken them (EXP-D).
+- **Re-audit**: caught two surfaces the first pass missed — including the
+  Python SDK transport being 403'd on every request (missing User-Agent).
+- **Gate HTTP hardening**: abort-safe body reads (a half-sent POST could
+  remotely crash the process), proxy-aware rate-limit buckets, exact
+  pathname routing, a process-level safety net, and an 8-class hostile
+  request battery. Reproduced and live-proven.
+- **v1→v2 cutover executed on mainnet**: 8 receipts replayed through
+  `Policy.submitTally` (2-of-3 verifier signatures), 7 bonds re-posted,
+  receipt-by-receipt parity verified. All reads and writes now use the
+  v2 line; the gate key is a gas relayer, v1 is archive-only.
+- **Bond economics decision** documented (EXP-C): `minBond` stays a
+  Sybil-cost signal — deterrent is reputation wipe + real payment cost.
+- **Chain-binding** proven at the gate: wrong-`chainId` payer signatures
+  are rejected, regression-tested (EXP-B safeguard).
+- **SECURITY.md** + `docs/external-review-brief.md` (intake package +
+  candidate-path shortlist) — the external review is the one remaining
+  Step 5 item, and it cannot be completed from the inside.
+- 60 Hardhat tests, 16 Python tests, immune scan clean.
+
+See also the repository-history correction note below.
+
+
 ## Repository history correction — 2026-11-26
 
 - The first five commits of this repository carried retroactive dates
