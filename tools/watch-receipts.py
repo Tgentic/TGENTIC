@@ -28,8 +28,10 @@ import urllib.request
 # Tallied(address indexed agent, address indexed payer, bytes32 indexed txHash,
 #        uint256 amount, uint8 rating) — topic verified against mainnet logs.
 TALLIED_TOPIC = "0x9daa2ff566b975dcfccd8073c33e394c4596081ec4ea918cb29f390268ab2a9e"
-CONTRACT = "0xCb2A4c9C2a552CBfE04DC0BbbCdC84E51ae734c8"
-DEPLOY_BLOCK = 118987578
+# v2 Receipts (policy-gated state layer) — the live surface. Watch the v1 archive
+# with --contract 0xCb2A4c9C2a552CBfE04DC0BbbCdC84E51ae734c8 --from-block 118987578.
+CONTRACT = "0x23537F09062134e6cfD8FF8D0a49b263D93bdB27"
+DEPLOY_BLOCK = 122282476
 EXPLORER = "https://robinhoodchain.blockscout.com"
 DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com"
 USDG_DECIMALS = 6

@@ -14,11 +14,12 @@ export const chain = defineChain({
 
 /** Deployed contract addresses on mainnet (chain 4663). */
 export const addresses = {
-  // v1 tally: score, receipts, bond — what the dapp and gate read today
-  tally: "0xCb2A4c9C2a552CBfE04DC0BbbCdC84E51ae734c8",
-  deployBlock: 118987578n,
-  // v2 line: state/policy split (m-of-n verifiers) + the on-chain flag contract
-  receipts: "0x23537F09062134e6cfD8FF8D0a49b263D93bdB27",
+  // v2 state layer (policy-gated): score, receipts, bond — the live read surface
+  tally: "0x23537F09062134e6cfD8FF8D0a49b263D93bdB27",
+  deployBlock: 122282476n,
+  // v1 archive: the original single-gate line, kept for historical reads
+  v1: "0xCb2A4c9C2a552CBfE04DC0BbbCdC84E51ae734c8",
+  v1DeployBlock: 118987578n,
   policy: "0x4651c76C501C54b6b649F4024BE34F7C58f7f4D3",
   heuristics: "0xe9D4eaa060Eb0E7EEE599c026C217e3b06082d47",
   // the bond/payment token (USDG)

@@ -97,7 +97,7 @@ class Client(unittest.TestCase):
             "4a714c24": hex(uints["payers"]), "247ce85b": hex(uints["bond"]),
             "89b7e586": hex(uints["unlockAt"]), "831518b7": hex(500000)}
 
-    LOG_BLOCK = 118989002
+    LOG_BLOCK = 122286811  # the same first payment, at its v2 Receipts block
 
     def _tg(self, latest=None):
         latest = latest or self.LOG_BLOCK
@@ -139,7 +139,7 @@ class Client(unittest.TestCase):
         self.assertEqual(r["payer"], "0x0416478379d1bce57d1ef75d1e6a81ff3018f5b1")
         self.assertEqual(r["amount"], 200000)
         self.assertEqual(r["rating"], 5)
-        self.assertEqual(r["block_number"], 118989002)
+        self.assertEqual(r["block_number"], 122286811)
         self.assertEqual(r["tx_hash"],
             "0x44d4be1951fe871593f4e4dd25d9b34c2f048150fa707bb721b84284f0736096")
 
@@ -156,7 +156,7 @@ class Client(unittest.TestCase):
         # latest far enough that deploy_block..latest spans several windows —
         # the range-aware stub only answers inside the log's own window
         from tgentic.client import LOG_BLOCK_RANGE
-        latest = 118987578 + 2 * LOG_BLOCK_RANGE + 5000
+        latest = 122282476 + 2 * LOG_BLOCK_RANGE + 5000
         calls = []
 
         def transport(method, params):

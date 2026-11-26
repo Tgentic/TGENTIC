@@ -1,6 +1,7 @@
 // Production entry point: read configuration from .env, start the server.
 import { getAddress, isAddress } from "viem";
-import { makeClients } from "./core.js";
+import { privateKeyToAccount } from "viem/accounts";
+import { makeClients, policyAbi } from "./core.js";
 import { createServer } from "./server.js";
 
 try { process.loadEnvFile(".env"); } catch {} // optional .env in the gate dir; missing values get a clear error below
@@ -29,11 +30,32 @@ const { publicClient, walletClient } = makeClients({ chainId, rpcUrl, privateKey
 const remote = await publicClient.getChainId();
 if (remote !== chainId) { console.error(`RPC is on chain ${remote}, expected ${chainId}.`); process.exit(1); }
 
+// v2 mode: writes go through the policy (m-of-n verifier signatures). The gate
+// itself is only the relayer — its key pays gas, the verifier signatures carry
+// the authority. Transition phase: the verifier keys live in this process, the
+// same hands as before, but every write now proves the m-of-n path on chain.
+const policy = env.POLICY_ADDRESS ? getAddress(env.POLICY_ADDRESS) : null;
+const signers = (env.VERIFIER_KEYS || "").split(",").map((s) => s.trim()).filter(Boolean).map((k) => privateKeyToAccount(k));
+if (policy) {
+  if (signers.length < 2) { console.error("POLICY_ADDRESS is set but VERIFIER_KEYS holds fewer than 2 keys — the policy is 2-of-3."); process.exit(1); }
+  // Reads and writes must target the same state layer: the policy writes to its
+  // wired Receipts, and TGENTIC_ADDRESS is what the used-check reads.
+  const wired = await publicClient.readContract({ address: policy, abi: policyAbi, functionName: "receipts" });
+  if (wired.toLowerCase() !== tgentic.toLowerCase()) { console.error(`TGENTIC_ADDRESS (${tgentic}) is not the policy's Receipts (${wired}) — reads and writes would diverge.`); process.exit(1); }
+  for (const s of signers) {
+    const ok = await publicClient.readContract({ address: policy, abi: policyAbi, functionName: "isVerifier", args: [s.address] });
+    if (!ok) { console.error(`VERIFIER_KEYS contains a non-verifier of the policy: ${s.address}`); process.exit(1); }
+  }
+  console.log(`v2 policy mode: ${signers.length} verifier key(s), submitter ${walletClient.account.address}`);
+}
+
 const ctx = {
   publicClient, walletClient, chainId,
   tgentic: getAddress(tgentic), usdg: getAddress(usdg),
+  policy, signers,
   facilitators: new Set(facilitators.map((a) => a.toLowerCase())),
   minConfirmations: Number(env.MIN_CONFIRMATIONS ?? 3),
+  detectFromBlock: BigInt(env.DETECT_FROM_BLOCK ?? 122_282_476), // v2 Receipts deploy block
   inflight: new Set(),
 };
 

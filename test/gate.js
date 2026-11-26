@@ -89,6 +89,37 @@ describe("gate", function () {
     expect(await code(core.handleTally(ctx, body))).to.equal("OK");
   });
 
+  it("records a tally through the v2 policy path (m-of-n signatures, gate only relays)", async () => {
+    const receipts = await ethers.deployContract("Receipts", [await usdg.getAddress(), 0n]);
+    const policy = await ethers.deployContract("Policy", [await receipts.getAddress(), [gate.address, facil.address, payer.address], 2n]);
+    await receipts.setPolicy(await policy.getAddress());
+    const chainId = Number((await ethers.provider.getNetwork()).chainId);
+    // same { address, signMessage } shape production gets from privateKeyToAccount,
+    // backed here by hardhat's eth_sign through the custom transport
+    const signerLike = (s) => {
+      const wc = core.makeClients({ chainId, provider: network.provider, account: s.address }).walletClient;
+      return { address: s.address, signMessage: (msg) => wc.signMessage({ account: s.address, ...msg }) };
+    };
+    const v2ctx = {
+      ...ctx,
+      tgentic: await receipts.getAddress(), policy: await policy.getAddress(),
+      // the gate signs with its own key plus a second verifier; sorted by address in core
+      signers: [gate, facil].map(signerLike),
+    };
+    const txHash = await pay();
+    const res = await core.handleTally(v2ctx, { agent: agent.address, txHash, rating: 4, signature: await sign(payerW, txHash, 4) });
+    expect(res.payer).to.equal(payer.address);
+    expect(res.amount).to.equal(AMOUNT.toString());
+    // state landed on the v2 layer, through the policy, keyed by the payment hash
+    expect(await receipts.reputation(agent.address)).to.equal(AMOUNT * 4n);
+    expect(await receipts.receipts(agent.address)).to.equal(1n);
+    expect(await receipts.used(txHash)).to.equal(true);
+    // the direct v1-style write is refused by the v2 state layer
+    await expect(receipts.connect(gate).tally(agent.address, payer.address, txHash, AMOUNT, 4)).to.be.revertedWithCustomError(receipts, "NotPolicy");
+    // replay through the gate is still blocked by the state layer's used map
+    expect(await code(core.handleTally(v2ctx, { agent: agent.address, txHash, rating: 4, signature: await sign(payerW, txHash, 4) }))).to.equal("ALREADY_TALLIED");
+  });
+
   it("rejects bad input and a missing tx", async () => {
     const txHash = await pay();
     const sig = await sign(payerW, txHash, 5);

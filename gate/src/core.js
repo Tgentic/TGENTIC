@@ -9,6 +9,14 @@ export const tgenticAbi = parseAbi([
   "function tally(address agent, address payer, bytes32 txHash, uint256 amount, uint8 rating)",
   "function used(bytes32) view returns (bool)",
 ]);
+
+// The v2 line: writes go through the policy (m-of-n verifier signatures), not a single EOA.
+export const policyAbi = parseAbi([
+  "function tallyDigest(address agent, address payer, bytes32 txHash, uint256 amount, uint8 rating) view returns (bytes32)",
+  "function submitTally(address agent, address payer, bytes32 txHash, uint256 amount, uint8 rating, bytes[] sigs)",
+  "function isVerifier(address) view returns (bool)",
+  "function receipts() view returns (address)",
+]);
 const transferAbi = parseAbi(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
 
 export class GateError extends Error {
@@ -76,7 +84,23 @@ export async function handleTally(ctx, body) {
     const signed = await ctx.publicClient.verifyMessage({ address: payer, message: feedbackMessage({ chainId: ctx.chainId, agent, txHash, rating }), signature });
     if (!signed) throw new GateError("BAD_SIGNATURE", "The signature does not belong to the payer of this transaction.", 401);
 
-    const hash = await ctx.walletClient.writeContract({ address: ctx.tgentic, abi: tgenticAbi, functionName: "tally", args: [getAddress(agent), payer, txHash, amount, rating] });
+    // v1: the gate EOA writes the tally directly. v2 (ctx.policy set): the state
+    // layer only accepts the policy — the gate collects m-of-n verifier signatures
+    // over the chain-computed digest and submits; the gate key carries no authority
+    // of its own here, it just pays gas as the relayer.
+    let hash;
+    if (ctx.policy) {
+      const digest = await ctx.publicClient.readContract({ address: ctx.policy, abi: policyAbi, functionName: "tallyDigest", args: [getAddress(agent), payer, txHash, amount, rating] });
+      // Policy._check requires the signatures sorted ascending by recovered signer.
+      const pairs = await Promise.all(ctx.signers.map(async (acc) => ({ sig: await acc.signMessage({ message: { raw: digest } }), addr: acc.address })));
+      pairs.sort((a, b) => (BigInt(a.addr) < BigInt(b.addr) ? -1 : 1));
+      hash = await ctx.walletClient.writeContract({
+        address: ctx.policy, abi: policyAbi, functionName: "submitTally",
+        args: [getAddress(agent), payer, txHash, amount, rating, pairs.map((p) => p.sig)],
+      });
+    } else {
+      hash = await ctx.walletClient.writeContract({ address: ctx.tgentic, abi: tgenticAbi, functionName: "tally", args: [getAddress(agent), payer, txHash, amount, rating] });
+    }
     const done = await ctx.publicClient.waitForTransactionReceipt({ hash });
     if (done.status !== "success") throw new GateError("TALLY_FAILED", "The tally transaction reverted.", 502);
     return { tallyTx: hash, agent: getAddress(agent), payer, amount: amount.toString(), rating };
