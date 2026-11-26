@@ -137,6 +137,15 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 - Facilitator addresses are taken from their public documentation and re-checked before use.
 - Tested on a local Hardhat network; the mainnet flow is exercised end to end — 8 receipts and 7 bonds live on the v2 state layer (deployments/4663-v2.json).
 
+## Security
+
+Found something? Report it privately via a
+[GitHub Security Advisory](https://github.com/Tgentic/TGENTIC/security/advisories/new) —
+scope and process in [SECURITY.md](SECURITY.md). Self-audit and its limits:
+[docs/security-review.md](docs/security-review.md). No external audit has
+been commissioned yet; reviews and responsible disclosures are welcome —
+the intake package is [docs/external-review-brief.md](docs/external-review-brief.md).
+
 ## License
 
 MIT
