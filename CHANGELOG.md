@@ -1,6 +1,21 @@
 # Changelog
 
 
+## Repository history correction — 2026-11-26
+
+- The first five commits of this repository carried retroactive dates
+  (Oct 18 – Nov 21, 2026) assigned during the private→public migration,
+  implying development began weeks before the repository existed.
+  Actual private development ran 20–23 Nov 2026; the repo went public
+  on 23 Nov.
+- Those commits have been consolidated into a single initial-import
+  commit dated at the real import. Every later commit keeps its original,
+  genuine timestamps. Tree contents are byte-identical — only the
+  fabricated dates were removed.
+- A third-party repository scan flagged the anomaly. The scan was right;
+  this is the correction.
+
+
 ## 1.7.0 — Step 4 complete: ERC-8004 trust registry integration
 
 - Live on the official ERC-8004 singletons on chain 4663 (the standard's
@@ -132,9 +147,11 @@ remotely triggerable request-crash vectors; each one now returns a clean
   bytes, traversal attempts and non-latin1 redirects all return 4xx/301
   while the server keeps answering `/health`.
 
-## 1.0.0 — 2026-11-21
+## 1.0.0 — 2026-11-23
 
-Initial public release.
+Initial public release (date corrected — see the history-correction note
+above; it previously read 2026-11-21, inherited from the retroactive
+commit dates).
 
 - `TGENTIC` tally contract: reputation from verified payments, bond
   with slash-on-wash-trading, 7-day unlock.
