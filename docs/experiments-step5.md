@@ -69,10 +69,13 @@ Measured, not assumed:
 - The public RPC rejects `eth_getLogs` spanning more than ~10,000,000
   blocks (boundary tested: span 10,000,001 accepted, 10,000,002 rejected;
   the limit is universal across contracts, not per-address).
-- All three read surfaces used a single un-chunked `getContractEvents`
-  from the fixed deploy block: the dapp (`web/src/app/chain.js`), the
-  gate `/risk` (`gate/src/heuristics.js`), and the SDK
-  (`sdk/src/index.js`). `viem` does not auto-chunk `getContractEvents`.
+- Read surfaces using the un-chunked pattern: the dapp
+  (`web/src/app/chain.js`), the gate `/risk` (`gate/src/heuristics.js`),
+  the TS SDK (`sdk/src/index.js`), **the Python SDK
+  (`sdk-python/tgentic/client.py`) and the receipt watcher
+  (`tools/watch-receipts.py`)** — the last two speak raw `eth_getLogs`
+  and were caught in re-audit, not in the first pass.
+  `viem` does not auto-chunk `getContractEvents`.
 
 **Projection:** the span crosses 10M blocks roughly 7 days after
 measurement (early December 2026 at the observed rate). After that, new
@@ -80,13 +83,21 @@ visitors would see "Could not read the chain" and existing sessions
 would silently freeze on stale data (poll errors are swallowed); `/risk`
 would return HTTP 500; SDK default reads would reject.
 
-**Fix shipped with this log:** all three surfaces now page the scan via
-`getLogs` + `blockRange` (8M blocks, under the cap). `viem`'s `iterateLogs`
-self-halves page size on range errors, so the mechanism also adapts if
-the RPC tightens limits or receipts densify. Verified: 54/54 Hardhat
-tests (incl. forced 1-block pagination), web build, live mainnet SDK
-read, and a forced multi-page scan (500k blockRange → ~9 pages) against
-the production RPC.
+**Fix shipped with this log:** all five surfaces now page the scan —
+`getLogs` + `blockRange` (8M blocks) in the viem clients, and an
+equivalent chunked `eth_getLogs` loop (blockNumber snapshot, 8M windows,
+halving on range errors) in the Python SDK and watcher. `viem`'s
+`iterateLogs` self-halves page size on range errors, so the mechanism
+also adapts if the RPC tightens limits or receipts densify. Verified:
+54/54 Hardhat tests (incl. forced 1-block pagination), 16/16 Python SDK
+tests (incl. forced multi-window pagination), web build, live mainnet
+reads on both SDKs, a forced multi-page scan (500k blockRange → ~9
+pages) against the production RPC, and `watch-receipts.py --once`.
+
+**Second finding from the same re-audit:** the Python SDK's default
+urllib transport had no `User-Agent` header — the RPC edge answered 403
+to every request, so `create_client()` defaults never worked against
+production (only custom transports did). One-line fix; verified live.
 
 **Residual (documented, not solved):** per-poll cost still grows with
 history; heavy concurrent polling can hit RPC rate limits. The durable

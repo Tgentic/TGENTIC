@@ -97,20 +97,31 @@ class Client(unittest.TestCase):
             "4a714c24": hex(uints["payers"]), "247ce85b": hex(uints["bond"]),
             "89b7e586": hex(uints["unlockAt"]), "831518b7": hex(500000)}
 
-    def _tg(self):
+    LOG_BLOCK = 118989002
+
+    def _tg(self, latest=None):
+        latest = latest or self.LOG_BLOCK
+
         def transport(method, params):
             if method == "eth_call":
                 return self.stub[params[0]["data"][2:10]]
+            if method == "eth_blockNumber":
+                return hex(latest)
             if method == "eth_getLogs":
+                q = params[0]
+                lo, hi = int(q["fromBlock"], 16), int(q["toBlock"], 16)
+                # range-aware: the log only exists inside its own block window
+                if not (lo <= self.LOG_BLOCK <= hi):
+                    return []
                 return [{
-                    "address": params[0]["address"],
+                    "address": q["address"],
                     "topics": [
                         "0x9daa2ff566b975dcfccd8073c33e394c4596081ec4ea918cb29f390268ab2a9e",
                         "0x" + "0" * 24 + AGENT[2:],
                         "0x" + "0" * 24 + "0416478379d1bce57d1ef75d1e6a81ff3018f5b1",
                         "0x44d4be1951fe871593f4e4dd25d9b34c2f048150fa707bb721b84284f0736096"],
                     "data": "0x" + f"{200000:064x}" + f"{5:064x}",
-                    "blockNumber": hex(118989002),
+                    "blockNumber": hex(self.LOG_BLOCK),
                     "transactionHash": "0x2d475b2ab23a66c9bdf6c5608b247e2b81d272c6e9e5e2cc8af32509e34b9daf"}]
             raise AssertionError(method)
         return create_client(transport=transport)
@@ -140,6 +151,43 @@ class Client(unittest.TestCase):
     def test_bad_address(self):
         with self.assertRaises(ValueError):
             self._tg().score("not-an-address")
+
+    def test_paginates_getlogs_across_windows(self):
+        # latest far enough that deploy_block..latest spans several windows —
+        # the range-aware stub only answers inside the log's own window
+        from tgentic.client import LOG_BLOCK_RANGE
+        latest = 118987578 + 2 * LOG_BLOCK_RANGE + 5000
+        calls = []
+
+        def transport(method, params):
+            if method == "eth_blockNumber":
+                return hex(latest)
+            if method == "eth_getLogs":
+                q = params[0]
+                calls.append((int(q["fromBlock"], 16), int(q["toBlock"], 16)))
+                lo, hi = int(q["fromBlock"], 16), int(q["toBlock"], 16)
+                if not (lo <= self.LOG_BLOCK <= hi):
+                    return []
+                return [{
+                    "address": q["address"],
+                    "topics": [
+                        "0x9daa2ff566b975dcfccd8073c33e394c4596081ec4ea918cb29f390268ab2a9e",
+                        "0x" + "0" * 24 + AGENT[2:],
+                        "0x" + "0" * 24 + "0416478379d1bce57d1ef75d1e6a81ff3018f5b1",
+                        "0x44d4be1951fe871593f4e4dd25d9b34c2f048150fa707bb721b84284f0736096"],
+                    "data": "0x" + f"{200000:064x}" + f"{5:064x}",
+                    "blockNumber": hex(self.LOG_BLOCK),
+                    "transactionHash": "0x2d475b2ab23a66c9bdf6c5608b247e2b81d272c6e9e5e2cc8af32509e34b9daf"}]
+            raise AssertionError(method)
+
+        from tgentic import create_client as cc
+        tg = cc(transport=transport)
+        rs = tg.receipts(AGENT)
+        self.assertEqual(len(rs), 1)
+        self.assertGreater(len(calls), 1)  # actually paged
+        # every request stayed under the cap
+        for lo, hi in calls:
+            self.assertLessEqual(hi - lo + 1, LOG_BLOCK_RANGE)
 
 
 if __name__ == "__main__":

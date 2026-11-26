@@ -21,6 +21,8 @@ export interface CreateClientOptions {
   address?: `0x${string}`;
   /** getLogs lower bound */
   deployBlock?: bigint;
+  /** max blocks per getLogs page (default 8M, under the RPC's ~10M cap) */
+  blockRange?: bigint;
 }
 
 export interface Score {

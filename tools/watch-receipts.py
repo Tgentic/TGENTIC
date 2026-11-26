@@ -33,6 +33,8 @@ DEPLOY_BLOCK = 118987578
 EXPLORER = "https://robinhoodchain.blockscout.com"
 DEFAULT_RPC = "https://rpc.mainnet.chain.robinhood.com"
 USDG_DECIMALS = 6
+# The public RPC caps a single eth_getLogs at ~10M blocks; page under it.
+LOG_BLOCK_RANGE = 8_000_000
 
 
 def rpc_call(rpc, method, params):
@@ -52,12 +54,28 @@ def rpc_call(rpc, method, params):
 
 
 def scan(rpc, contract, from_block):
-    logs = rpc_call(rpc, "eth_getLogs", [{
-        "address": contract,
-        "topics": [TALLIED_TOPIC],
-        "fromBlock": hex(from_block),
-        "toBlock": "latest",
-    }])
+    """Chunked eth_getLogs: blockNumber snapshot as toBlock, windows under
+    the RPC's ~10M-block cap, halving a window on range errors."""
+    latest = int(rpc_call(rpc, "eth_blockNumber", []), 16)
+    logs = []
+    cursor = from_block
+    while cursor <= latest:
+        end = min(cursor + LOG_BLOCK_RANGE - 1, latest)
+        while True:
+            try:
+                page = rpc_call(rpc, "eth_getLogs", [{
+                    "address": contract,
+                    "topics": [TALLIED_TOPIC],
+                    "fromBlock": hex(cursor),
+                    "toBlock": hex(end),
+                }])
+                break
+            except RuntimeError:
+                if end <= cursor:
+                    raise
+                end = cursor + (end - cursor) // 2
+        logs.extend(page)
+        cursor = end + 1
     return logs
 
 

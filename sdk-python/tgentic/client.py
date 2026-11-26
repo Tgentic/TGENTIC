@@ -34,6 +34,8 @@ ADDRESSES = {
 _TALLIED_TOPIC = event_topic("Tallied(address,address,bytes32,uint256,uint8)")
 _UINT_VIEWS = ("score", "reputation", "paid", "receipts", "payers", "bond", "unlockAt")
 _ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+# The public RPC caps a single eth_getLogs at ~10M blocks; page under it.
+LOG_BLOCK_RANGE = 8_000_000
 
 
 def _check_addr(a):
@@ -48,7 +50,9 @@ def _urllib_transport(url):
             {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
         ).encode()
         req = urllib.request.Request(
-            url, data=body, headers={"Content-Type": "application/json"}
+            url, data=body,
+            headers={"Content-Type": "application/json",
+                     "User-Agent": "tgentic-sdk/0.1"},
         )
         with urllib.request.urlopen(req, timeout=30) as r:
             out = json.loads(r.read())
@@ -71,15 +75,34 @@ class Client:
         res = self._rpc("eth_call", [{"to": self.address, "data": data}, "latest"])
         return int(res, 16)
 
+    def _get_logs(self, topics):
+        """Chunked eth_getLogs: one blockNumber snapshot as toBlock, windows
+        under the RPC's ~10M-block cap, halving a window on range errors."""
+        latest = int(self._rpc("eth_blockNumber", []), 16)
+        logs = []
+        cursor = self.deploy_block
+        while cursor <= latest:
+            end = min(cursor + LOG_BLOCK_RANGE - 1, latest)
+            while True:
+                try:
+                    page = self._rpc("eth_getLogs", [{
+                        "address": self.address,
+                        "fromBlock": hex(cursor),
+                        "toBlock": hex(end),
+                        "topics": topics,
+                    }])
+                    break
+                except RuntimeError:
+                    if end <= cursor:
+                        raise
+                    end = cursor + (end - cursor) // 2
+            logs.extend(page)
+            cursor = end + 1
+        return logs
+
     def _tallied(self, agent=None):
         topics = [_TALLIED_TOPIC] + ([pad_address(agent)] if agent else [])
-        logs = self._rpc("eth_getLogs", [{
-            "address": self.address,
-            "fromBlock": hex(self.deploy_block),
-            "toBlock": "latest",
-            "topics": topics,
-        }])
-        return [_receipt(l) for l in logs]
+        return [_receipt(l) for l in self._get_logs(topics)]
 
     def score(self, agent):
         """Counted score + raw reputation + bond state."""

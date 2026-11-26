@@ -69,7 +69,7 @@ across dapp, gate and SDK.
 - [ ] Bond economics decision: `minBond` is currently symbolic (0.5 USDG) — real collateral vs. Sybil-cost signal; oracle denomination only matters if it becomes collateral
 - [ ] Multi-chain receipt verification — experiment showed the real requirement is chain-binding at the gate (payment verified on the tally's chain), not just porting rules
 - [x] Gas and storage profiling, including the on-chain cost of proof verification — measured on mainnet (EXP-A)
-- [x] Log-range scale fix — event scans now page automatically across the dapp, gate `/risk` and SDK (EXP-D)
+- [x] Log-range scale fix — event scans now page automatically across the dapp, gate `/risk`, TS SDK, Python SDK and receipt watcher (EXP-D)
 
 **Done means:** the system has been reviewed by someone we did not write
 ourself, and it stays honest at scale.
