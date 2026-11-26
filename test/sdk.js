@@ -77,6 +77,18 @@ describe("sdk (Step 4: integration)", function () {
     catch (e) { expect(e.message).to.include("Not an address"); }
   });
 
+  it("paginates getLogs correctly with a tiny blockRange", async () => {
+    const { createClient } = await import("../sdk/src/index.js");
+    const paged = createClient({ provider: network.provider, address: await t.getAddress(), deployBlock: 0n, blockRange: 1n });
+    await tally(agent, payer, "pg-1");
+    await tally(agent, other, "pg-2", 500000n, 5);
+    const rs = await paged.receipts(agent.address);
+    expect(rs).to.have.lengthOf(2);
+    expect(rs.map((r) => r.txHash)).to.have.members([ethers.id("tx-pg-1"), ethers.id("tx-pg-2")]);
+    const feed = await paged.recent(5);
+    expect(feed.length).to.be.greaterThan(0);
+  });
+
   it("computeFlags stays the canonical detector — gate and web share this file", async () => {
     const { computeFlags } = await import("../sdk/src/flags.js");
     const txHash = ethers.id("same-payment");

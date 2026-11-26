@@ -58,15 +58,21 @@ detector in the gate at /risk, the dapp and the SDK.*
 **Done means:** a third-party developer can integrate TGENTIC in an
 afternoon without reading the contract.
 
-## Step 5 — Assurance & scale
+## Step 5 — Assurance & scale (in progress)
+
+Experiment log: docs/experiments-step5.md — gas profiling on real mainnet
+transactions, cross-chain replay simulation, bond depeg analysis, a
+200k-history bond lifecycle fuzz, and the log-range scale fix now shipped
+across dapp, gate and SDK.
 
 - [ ] External security review of the contract and gate — shortlist the firms that have already reviewed comparable privacy and reputation systems
-- [ ] USD-denominated `minBond` via an oracle — slash stakes should not silently deflate with token prices
-- [ ] Multi-chain receipt verification: same anti-replay rules on any chain the facilitators settle on
-- [ ] Gas and storage profiling, including the on-chain cost of proof verification
+- [ ] Bond economics decision: `minBond` is currently symbolic (0.5 USDG) — real collateral vs. Sybil-cost signal; oracle denomination only matters if it becomes collateral
+- [ ] Multi-chain receipt verification — experiment showed the real requirement is chain-binding at the gate (payment verified on the tally's chain), not just porting rules
+- [x] Gas and storage profiling, including the on-chain cost of proof verification — measured on mainnet (EXP-A)
+- [x] Log-range scale fix — event scans now page automatically across the dapp, gate `/risk` and SDK (EXP-D)
 
 **Done means:** the system has been reviewed by someone we did not write
-ourselves, and it stays honest at scale.
+ourself, and it stays honest at scale.
 
 ## Step 6 — Agent identity
 

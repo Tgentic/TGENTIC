@@ -14,6 +14,8 @@ const talliedAbi = parseAbi([
 ]);
 
 export const DEFAULT_FROM_BLOCK = 118987578n; // the v1 state layer's deploy block
+// The public RPC caps a single getLogs at ~10M blocks; blockRange makes viem page the scan automatically.
+export const LOG_BLOCK_RANGE = 8_000_000n;
 
 /**
  * Read an agent's receipts and compute the manipulation heuristics.
@@ -24,7 +26,7 @@ export const DEFAULT_FROM_BLOCK = 118987578n; // the v1 state layer's deploy blo
  * @param {string} o.agent
  * @param {bigint} [o.fromBlock]   getLogs lower bound (the RPC rejects very wide ranges)
  */
-export async function assessAgent(publicClient, { address, agent, fromBlock = DEFAULT_FROM_BLOCK }) {
-  const logs = await publicClient.getContractEvents({ address, abi: talliedAbi, eventName: "Tallied", args: { agent }, fromBlock });
+export async function assessAgent(publicClient, { address, agent, fromBlock = DEFAULT_FROM_BLOCK, blockRange = LOG_BLOCK_RANGE }) {
+  const logs = await publicClient.getLogs({ address, events: talliedAbi, args: { agent }, fromBlock, blockRange });
   return computeFlags(logs.map((l) => ({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash })), agent);
 }

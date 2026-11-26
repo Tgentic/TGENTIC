@@ -27,7 +27,9 @@ const erc20Abi = [
 ];
 
 const read = (functionName, args) => pub.readContract({ address: ADDRESS, abi, functionName, args });
-const tallied = (args) => pub.getContractEvents({ address: ADDRESS, abi, eventName: "Tallied", args, fromBlock: DEPLOY_BLOCK });
+// The RPC caps a single getLogs at ~10M blocks; blockRange makes viem page the scan automatically (self-halving on range errors).
+const talliedEvent = abi.find((x) => x.type === "event" && x.name === "Tallied");
+const tallied = (args) => pub.getLogs({ address: ADDRESS, events: [talliedEvent], args, fromBlock: DEPLOY_BLOCK, blockRange: 8_000_000n });
 
 async function readToken() {
   const [token, minBond] = await Promise.all([read("token"), read("minBond")]);

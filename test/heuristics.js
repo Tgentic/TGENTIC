@@ -82,6 +82,14 @@ describe("heuristics (Step 3: manipulation resistance)", function () {
       expect(r.flagged).to.equal(true);
     });
 
+    it("paginates the event scan when blockRange is smaller than the span", async () => {
+      for (let i = 0; i < 3; i++) await tally({ from: payer, to: agent, txTag: `p-${i}` });
+      // one block per page — forces iterateLogs across every block in the range
+      const r = await assessAgent(ctx.publicClient, { address: ctx.tgentic, agent: agent.address, fromBlock: 0n, blockRange: 1n });
+      expect(r.receipts).to.equal(3);
+      expect(r.payers).to.equal(1);
+    });
+
     it("reads the payer and amount, not just counts", async () => {
       await tally({ from: payer, to: agent, amount: 777000n, txTag: "one" });
       const r = await assessAgent(ctx.publicClient, { address: ctx.tgentic, agent: agent.address, fromBlock: 0n });

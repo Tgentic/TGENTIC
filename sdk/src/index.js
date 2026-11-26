@@ -54,13 +54,16 @@ const tallyAbi = [
  * @param {object} [o.provider]    an EIP-1193 provider to ride instead of http (used by tests)
  * @param {string} [o.address]     tally contract address (default: mainnet v1)
  * @param {bigint} [o.deployBlock] getLogs lower bound — required by the RPC for wide ranges
+ * @param {bigint} [o.blockRange]   max blocks per getLogs page (default 8M, under the RPC's ~10M cap)
  */
-export function createClient({ rpcUrl, provider, address = addresses.tally, deployBlock = addresses.deployBlock } = {}) {
+export function createClient({ rpcUrl, provider, address = addresses.tally, deployBlock = addresses.deployBlock, blockRange = 8_000_000n } = {}) {
   const pub = provider
     ? createPublicClient({ transport: custom(provider) })
     : createPublicClient({ chain, transport: http(rpcUrl) });
   const read = (functionName, args = []) => pub.readContract({ address, abi: tallyAbi, functionName, args });
-  const tallied = (args = {}) => pub.getContractEvents({ address, abi: tallyAbi, eventName: "Tallied", args, fromBlock: deployBlock });
+  // The public RPC caps a single getLogs at ~10M blocks; blockRange makes viem page the scan automatically.
+  const talliedEvent = tallyAbi.find((x) => x.type === "event" && x.name === "Tallied");
+  const tallied = (args = {}) => pub.getLogs({ address, events: [talliedEvent], args, fromBlock: deployBlock, blockRange });
   const need = (a) => { if (!isAddress(a)) throw new Error(`Not an address: ${a}`); return a; };
 
   const api = {
