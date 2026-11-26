@@ -5,6 +5,15 @@ import { createServer } from "./server.js";
 
 try { process.loadEnvFile(".env"); } catch {} // optional .env in the gate dir; missing values get a clear error below
 
+// Last-resort safety net (F3 lesson): every request handler is async, so any
+// rejection we failed to anticipate would otherwise be an unhandled rejection,
+// which exits Node by default — a remote crash. Keep serving and log loudly
+// instead; a broken request must never take the whole gate down. This does not
+// replace handling errors at the source — a message here is a bug to fix.
+const survived = (kind) => (err) => console.error(`[BUG:${kind}] the process survived — fix this path:`, err?.shortMessage ?? err?.message ?? err);
+process.on("unhandledRejection", survived("unhandledRejection"));
+process.on("uncaughtException", survived("uncaughtException"));
+
 const env = process.env;
 const need = (k) => { if (!env[k]) { console.error(`Missing ${k} in .env (see .env.example).`); process.exit(1); } return env[k]; };
 

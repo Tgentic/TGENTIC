@@ -198,4 +198,65 @@ describe("gate", function () {
       server.close();
     }
   });
+
+  it("HTTP: hostile request battery — the process must survive everything", async () => {
+    const net = require("node:net");
+    const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
+    // Any rejection the server fails to handle lands here; the battery asserts zero.
+    const violations = [];
+    const onRejection = (e) => violations.push(`unhandledRejection: ${e?.message ?? e}`);
+    const onUncaught = (e) => violations.push(`uncaughtException: ${e?.message ?? e}`);
+    process.on("unhandledRejection", onRejection);
+    process.on("uncaughtException", onUncaught);
+
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));
+    fs.writeFileSync(path.join(dist, "index.html"), `<html>${"x".repeat(300_000)}</html>`);
+    const server = srv.createServer(ctx, { webDist: dist }).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const port = server.address().port;
+
+    // Raw socket helpers: write bytes then kill the connection mid-exchange.
+    const raw = (bytes, { holdMs = 100, afterWrite } = {}) => new Promise((resolve) => {
+      const s = net.connect(port, "127.0.0.1", () => {
+        s.write(bytes);
+        afterWrite?.(s);
+        setTimeout(() => { s.destroy(); resolve(); }, holdMs);
+      });
+      s.on("error", () => {}); // RST on destroy is expected, not a finding
+    });
+
+    try {
+      // 1. abort a content-length POST mid-body (the F3 repro)
+      await raw("POST /tally HTTP/1.1\r\nHost: x\r\nContent-Length: 100000\r\n\r\n{\"partial\":");
+      // 2. abort a chunked POST mid-chunk
+      await raw("POST /tally HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n4\r\n{\"a\"\r\n");
+      // 3. abort during a static download (response already streaming)
+      await fetch(`http://127.0.0.1:${port}/`).then((r) => r.body.cancel()); // reader abort mid-stream
+      await raw("GET / HTTP/1.1\r\nHost: x\r\n\r\n", { holdMs: 30 });
+      // 4. garbage HTTP and hostile request lines
+      await raw("GARBAGE\r\n\r\n");
+      await raw("\x00\x01\x02\x03\r\n\r\n");
+      // 5. a very long URL and a long header line (Node itself must 404/431, not crash)
+      await raw(`GET /${"a".repeat(10_000)} HTTP/1.1\r\nHost: x\r\n\r\n`);
+      await raw(`GET / HTTP/1.1\r\nHost: x\r\nX-Big: ${"b".repeat(20_000)}\r\n\r\n`);
+      // 6. bodiless POST and a HEAD
+      await raw("POST /tally HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
+      await raw("HEAD /health HTTP/1.1\r\nHost: x\r\n\r\n");
+      // 7. /risk with hostile query encodings
+      for (const q of ["%", "%zz", "%E0%A4%A", "%ff", ""]) {
+        const r = await fetch(`http://127.0.0.1:${port}/risk?agent=${q}`);
+        expect([200, 400, 500].includes(r.status), `agent=${q}`).to.equal(true);
+      }
+
+      // Let any late rejection from destroyed sockets surface, then judge.
+      await new Promise((r) => setTimeout(r, 500));
+      expect(violations, violations.join("; ")).to.have.lengthOf(0);
+      // …and the process survived everything.
+      expect((await fetch(`http://127.0.0.1:${port}/health`)).status).to.equal(200);
+    } finally {
+      process.off("unhandledRejection", onRejection);
+      process.off("uncaughtException", onUncaught);
+      server.close();
+    }
+  });
 });
