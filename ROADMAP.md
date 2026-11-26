@@ -65,14 +65,18 @@ transactions, cross-chain replay simulation, bond depeg analysis, a
 200k-history bond lifecycle fuzz, and the log-range scale fix now shipped
 across dapp, gate and SDK.
 
-- [ ] External security review of the contract and gate — shortlist the firms that have already reviewed comparable privacy and reputation systems
-- [ ] Bond economics decision: `minBond` is currently symbolic (0.5 USDG) — real collateral vs. Sybil-cost signal; oracle denomination only matters if it becomes collateral
-- [ ] Multi-chain receipt verification — experiment showed the real requirement is chain-binding at the gate (payment verified on the tally's chain), not just porting rules
+- [ ] External security review of the contract and gate — intake package + candidate-path shortlist ready (docs/external-review-brief.md); the engagement itself is the open item
+- [x] Bond economics decision: `minBond` stays a symbolic Sybil-cost signal (0.5 USDG), not collateral — deterrent is reputation wipe + real payment cost; oracle scoped out (ratio is depeg-invariant); revisit triggers documented (EXP-C)
+- [x] Multi-chain receipt verification — chain-binding is enforced at the gate: boot fails on wrong chainId, payer signatures carry the chainId (wrong-chain sigs rejected, regression-tested), payment and tally share one client. Second-chain deployment stays Step 10 scope (docs/multi-chain-design.md)
 - [x] Gas and storage profiling, including the on-chain cost of proof verification — measured on mainnet (EXP-A)
 - [x] Log-range scale fix — event scans now page automatically across the dapp, gate `/risk`, TS SDK, Python SDK and receipt watcher (EXP-D)
+- [x] v1→v2 cutover — all reads and policy-gated writes on the v2 line; 8 receipts replayed, 7 bonds re-posted, parity verified on mainnet (docs/cutover-v1-v2.md)
+- [x] Gate HTTP hardening — abort-safe body read, proxy-aware rate limiting, exact routing, process-level safety net, 8-class hostile request battery (docs/security-review.md, F3–F5)
 
 **Done means:** the system has been reviewed by someone we did not write
-ourself, and it stays honest at scale.
+ourself, and it stays honest at scale. Everything above except the
+external review is done — that last item cannot be completed from the
+inside.
 
 ## Step 6 — Agent identity
 

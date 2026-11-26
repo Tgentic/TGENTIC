@@ -77,11 +77,13 @@ this one file, so all surfaces stay consistent.
 - **I4 — no sweep/rescue function.** Tokens sent to the contract outside
   `deposit()` are unrecoverable. Standard for this design; noted.
 - **I5 — v1 gate is a single immutable EOA** (`gate()` on
-  `0xCb2A4c9C…` = `0xdac0e38a…`, no setter). Already public: every live tally
-  is written by that one key, including `slash()`. The v2 line
-  (`Receipts` + `Policy`, 2-of-3 verifiers) is deployed and has recorded a
-  tally, but the dapp/SDK/`/risk` still read v1 — cutover pending. This is
-  the biggest known trust assumption and the reason step 5 exists.
+  `0xCb2A4c9C…` = `0xdac0e38a…`, no setter). **Resolved by the cutover:**
+  all live reads (dapp, SDKs, `/risk`, watcher) and all writes (the gate
+  submits through `Policy.submitTally`, 2-of-3 verifier signatures) now use
+  the v2 line. The v1 contract remains on chain — its old EOA can still
+  write v1 state, but no live surface reads it. Residual: the v2 verifier
+  set is still team-controlled (2-of-3 team keys, two colocated in the gate
+  process); independent verifiers are a declared next step.
 - **I6 — `used[txHash]` is global per transaction hash.** A facilitator
   transaction that pays two different agents can only produce one tally; the
   second agent's receipt is rejected `AlreadyTallied`. Current facilitators

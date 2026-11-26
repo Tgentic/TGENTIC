@@ -122,8 +122,8 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 1. **Foundation** — shipped (v1.0.1)
 2. **Decentralized trust** — shipped on mainnet: state/policy split, 2-of-3 verifiers, evidence-based slashing
 3. **Manipulation resistance** — shipped on mainnet: on-chain flags (Heuristics 0xe9D4eaa0…), event-based detection at /risk, rate limiting, dapp signals
-4. **Integration** — TypeScript + Python SDKs shipped (sdk/, sdk-python/); next: ERC-8004 registry, agent directory
-5. **Assurance & scale** — external security review, USD-denominated minBond via oracle, multi-chain receipts
+4. **Integration** — shipped on mainnet: TypeScript + Python SDKs, ERC-8004 registry live (7 agents, 8 payment-proven feedback), agent directory
+5. **Assurance & scale** — v1→v2 cutover done (all reads + policy-gated writes on v2), gas/log-range profiling shipped; next: external security review
 6. **Agent identity** — signed agent manifests, identity-to-score resolution, key rotation
 7. **Reputation consumption** — marketplace APIs, hiring flow, viewing-key access, pricing signals
 8. **Portable receipts** — private-by-choice payers, commitment tree + nullifiers, Noir proofs, batched verification
@@ -132,10 +132,10 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 
 ## Known limits
 
-- A single gate key is fully trusted to record and to slash. The v2 line (Receipts.sol + Policy.sol) is deployed on mainnet with a 2-of-3 verifier set (see deployments/4663-v2.json); the dapp still reads the v1 contract until the migration is cut over.
+- Writes go through the v2 policy (2-of-3 verifier signatures); the gate key is a gas relayer with no authority over what gets recorded. The verifier set is currently team-controlled — independent verifiers are a declared next step. The v1 contract remains on chain as an archive; no live surface reads it.
 - Self-dealing is only caught when payer = agent exactly; payments from another wallet owned by the same person are not detected. The dapp shows the unique payer count so observers can judge.
 - Facilitator addresses are taken from their public documentation and re-checked before use.
-- Tested on a local Hardhat network; the live-network flow is exercised by `scripts/demo-testnet.js`.
+- Tested on a local Hardhat network; the mainnet flow is exercised end to end — 8 receipts and 7 bonds live on the v2 state layer (deployments/4663-v2.json).
 
 ## License
 

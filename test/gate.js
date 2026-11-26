@@ -80,6 +80,12 @@ describe("gate", function () {
     expect(await code(core.handleTally(ctx, { agent: payer.address, txHash, rating: 5, signature: await sign(payerW, txHash, 5, payer.address) }))).to.equal("SELF_PAYMENT");
   });
 
+  it("rejects a signature bound to a different chain (EXP-B safeguard)", async () => {
+    const txHash = await pay();
+    const sig = await payerW.signMessage({ message: core.feedbackMessage({ chainId: ctx.chainId + 1, agent: agent.address, txHash, rating: 5 }) });
+    expect(await code(core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature: sig }))).to.equal("BAD_SIGNATURE");
+  });
+
   it("waits for enough confirmations", async () => {
     ctx.minConfirmations = 3;
     const txHash = await pay();

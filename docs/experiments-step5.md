@@ -57,7 +57,32 @@ chain-binding at the gate, not just porting the rules.
 - **Open design question:** is the bond meant to be real collateral or a
   Sybil-cost signal? If collateral → raise `minBond` *and* peg USD
 together. If signal → document the intent and the oracle item can be
-re-scoped. Decision pending; not implemented.
+re-scoped.
+
+**Decision (taken): Sybil-cost signal, not collateral.** Reasoning:
+
+- The bond's real jobs in the code are (1) gating `score()` — no bond, no
+  counted reputation — and (2) a commitment signal. The actual deterrent
+  is elsewhere: every receipt requires a real, non-refundable USDG
+  payment, and a slash wipes reputation entirely (`score() → 0`), not
+  just the $0.50.
+- Slash burns the bond to a dead address — it is a hostage, not victim
+  compensation, so "real collateral" was never promising restitution
+  anyway.
+- Raising `minBond` during bootstrap (7 agents, all team-generated) would
+  add friction to onboarding without adding security: a funded attacker
+  pays a bigger bond the same way they pay receipts. Price rises, deterrence
+  doesn't change shape.
+- The oracle alone changed nothing (ratio is depeg-invariant, shown
+  above), so it is correctly out of scope regardless.
+- `minBond` is immutable in both contract lines — changing it means a
+  redeploy + bond migration, a cost only worth paying with usage data.
+
+**Revisit triggers:** real manipulation observed at the current cost;
+an integrator requires meaningful collateral; or independent verifiers
+join (raising bond size while slash authority is still team-controlled
+would grow the hostage value behind keys we still hold — the wrong
+order). Revisit after usage data, not before.
 
 ## EXP-D — Scale / log-range failure (the deadline finding)
 
