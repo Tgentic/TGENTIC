@@ -48,6 +48,14 @@ if (policy) {
   }
   console.log(`v2 policy mode: ${signers.length} verifier key(s), submitter ${walletClient.account.address}`);
 }
+// Without a policy the gate writes tallies with its own key — the single-EOA
+// authority the v2 line exists to remove. That mode must be opted into
+// explicitly; a missing POLICY_ADDRESS must never silently re-enable it.
+if (!policy && env.ALLOW_V1_MODE !== "1") {
+  console.error("POLICY_ADDRESS is not set — refusing to boot. In v1 mode this key writes tallies directly, bypassing the verifier quorum. Set POLICY_ADDRESS + VERIFIER_KEYS, or set ALLOW_V1_MODE=1 to run legacy v1 mode intentionally (archive/testing only).");
+  process.exit(1);
+}
+if (!policy) console.warn("ALLOW_V1_MODE=1 — legacy v1 mode: the gate key writes tallies directly, no policy quorum.");
 
 const ctx = {
   publicClient, walletClient, chainId,
