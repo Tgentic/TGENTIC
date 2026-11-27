@@ -12,7 +12,10 @@ const receiptsAbi = parseAbi([
   "function receipts(address) view returns (uint256)",
   "function payers(address) view returns (uint256)",
   "function reputation(address) view returns (uint256)",
+  "function minBond() view returns (uint256)",
 ]);
+
+export const MAX_BATCH = 10;
 
 const SERVER_INFO = { name: "tgentic-mcp", version: "1.0.0" };
 const PROTOCOL_VERSION = "2025-06-18";
@@ -40,15 +43,17 @@ const TOOLS = [
 
 const validAgent = (a) => typeof a === "string" && isAddress(a);
 
-async function callTool(ctx, name, args = {}) {
-  if (!validAgent(args.agent)) throw new Error("agent must be a 0x address");
-  const agent = getAddress(args.agent.toLowerCase());
+async function callTool(ctx, name, args) {
+  const agentArg = args && typeof args === "object" ? args.agent : undefined;
+  if (!validAgent(agentArg)) throw new Error("agent must be a 0x address");
+  const agent = getAddress(agentArg.toLowerCase());
   if (name === "get_agent_score") {
-    const read = (fn) => ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: fn, args: [agent] });
-    const [score, bond, receipts, payers, reputation] = await Promise.all(
-      ["score", "bond", "receipts", "payers", "reputation"].map(read),
-    );
-    return { agent, score: score.toString(), reputation: reputation.toString(), receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(), counted: score > 0n };
+    const read = (fn, a = [agent]) => ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: fn, args: a });
+    const [score, bond, receipts, payers, reputation, minBond] = await Promise.all([
+      ...["score", "bond", "receipts", "payers", "reputation"].map((fn) => read(fn)),
+      read("minBond", []),
+    ]);
+    return { agent, score: score.toString(), reputation: reputation.toString(), receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(), counted: bond >= minBond };
   }
   if (name === "get_agent_risk") {
     return assessAgent(ctx.publicClient, { address: ctx.tgentic, agent, fromBlock: ctx.detectFromBlock });
@@ -96,6 +101,7 @@ async function handleMessage(ctx, m) {
 export async function handleMcp(ctx, parsedBody) {
   if (Array.isArray(parsedBody)) {
     if (parsedBody.length === 0) return { status: 400, body: error(null, -32600, "empty batch") };
+    if (parsedBody.length > MAX_BATCH) return { status: 400, body: error(null, -32600, `batch exceeds limit of ${MAX_BATCH}`) };
     const responses = (await Promise.all(parsedBody.map((m) => handleMessage(ctx, m)))).filter(Boolean);
     return responses.length ? { status: 200, body: responses } : { status: 202 };
   }

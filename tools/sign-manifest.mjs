@@ -5,14 +5,24 @@
 import { writeFileSync } from "node:fs";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { newManifest, signManifest, manifestMessage } from "../gate/src/manifest.js";
+import { newManifest, signManifest, manifestMessage, validateManifest } from "../gate/src/manifest.js";
 
 const args = process.argv.slice(2);
 const opt = (name) => {
   const i = args.indexOf(`--${name}`);
-  return i < 0 ? undefined : args[i + 1];
+  if (i < 0) return undefined;
+  if (i + 1 >= args.length || args[i + 1].startsWith("--")) throw new Error(`missing value for --${name}`);
+  return args[i + 1];
 };
-const opts = (name) => args.filter((a, i) => a === `--${name}`).map((_, j) => args[args.indexOf(`--${name}`, j) + 1]);
+const opts = (name) => {
+  const out = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] !== `--${name}`) continue;
+    if (i + 1 >= args.length || args[i + 1].startsWith("--")) throw new Error(`missing value for --${name}`);
+    out.push(args[i + 1]);
+  }
+  return out;
+};
 
 const key = process.env.AGENT_KEY;
 const agent = opt("agent");
@@ -27,7 +37,9 @@ if (account.address.toLowerCase() !== agent.toLowerCase()) {
   process.exit(1);
 }
 const endpoints = opts("endpoint").map((e) => {
-  const [n, url] = e.split("=", 2);
+  const eq = e.indexOf("=");
+  const n = eq > 0 ? e.slice(0, eq) : "";
+  const url = eq > 0 ? e.slice(eq + 1) : "";
   if (!n || !url) throw new Error(`bad --endpoint ${e} (want name=url)`);
   return { name: n, url };
 });
@@ -43,6 +55,11 @@ const manifest = newManifest({
 });
 const client = createWalletClient({ account, transport: http("https://rpc.mainnet.chain.robinhood.com") });
 const signed = await signManifest(client, manifest);
+const errors = validateManifest(signed);
+if (errors.length) {
+  console.error("manifest validation failed:", errors.join("; "));
+  process.exit(1);
+}
 const out = opt("out") ?? `manifests/${agent.toLowerCase()}.json`;
 writeFileSync(out, JSON.stringify(signed, null, 2) + "\n");
 console.log(`wrote ${out} (${manifestMessage(signed).length} canonical bytes, signed by ${account.address})`);

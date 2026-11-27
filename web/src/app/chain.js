@@ -59,16 +59,31 @@ export const api = {
   explorer: env.VITE_EXPLORER || "https://robinhoodchain.blockscout.com",
   readToken,
   readAgent,
-  receipts: async (agent) => (await tallied({ agent })).slice(-50).reverse(),
-  recent: async (n = 8) => (await tallied()).slice(-n).reverse(),
+  receipts: async (agent) => (await tallied({ agent })).reverse(),
+  recent: async (n = 8) => (!Number.isInteger(n) || n <= 0 ? [] : (await tallied()).slice(-n).reverse()),
   async board() {
     const logs = await tallied();
-    const agents = [...new Set(logs.map((l) => l.args.agent))].slice(0, 100);
+    const byAgent = new Map();
+    for (const l of logs) {
+      const key = l.args.agent.toLowerCase();
+      if (!byAgent.has(key)) byAgent.set(key, { a: l.args.agent, logs: [] });
+      byAgent.get(key).logs.push(l);
+    }
     const tk = await readToken();
-    const rows = await Promise.all(agents.map(async (a) => ({
+    // Rank via score() alone (1 eth_call/agent, bounded concurrency) so full 7-call
+    // reads only run for the top 100 displayed agents.
+    const entries = [...byAgent.values()];
+    const ranked = [];
+    for (let i = 0; i < entries.length; i += 20) {
+      const chunk = entries.slice(i, i + 20);
+      const scores = await Promise.all(chunk.map((e) => read("score", [e.a])));
+      for (let j = 0; j < chunk.length; j++) ranked.push({ ...chunk[j], score: scores[j] });
+    }
+    ranked.sort((x, y) => (y.score > x.score ? 1 : y.score < x.score ? -1 : 0));
+    const rows = await Promise.all(ranked.slice(0, 100).map(async ({ a, logs: alogs }) => ({
       a,
       ...(await readAgent(a)),
-      flags: flagsFor(a, logs.filter((l) => l.args.agent === a)).flags,
+      flags: flagsFor(a, alogs).flags,
     })));
     return { tk, rows };
   },

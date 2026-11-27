@@ -135,6 +135,19 @@ describe("gate", function () {
     expect(await code(core.handleTally(ctx, { agent: agent.address, txHash: ethers.id("nope"), rating: 5, signature: sig }))).to.equal("TX_NOT_FOUND");
   });
 
+  it("serializes concurrent valid tallies without relayer nonce collisions", async () => {
+    const tx1 = await pay();
+    const tx2 = await pay();
+    const [sig1, sig2] = await Promise.all([sign(payerW, tx1, 4), sign(payerW, tx2, 5)]);
+    const [r1, r2] = await Promise.all([
+      core.handleTally(ctx, { agent: agent.address, txHash: tx1, rating: 4, signature: sig1 }),
+      core.handleTally(ctx, { agent: agent.address, txHash: tx2, rating: 5, signature: sig2 }),
+    ]);
+    expect(r1.tallyTx).to.not.equal(r2.tallyTx);
+    expect(await tm.receipts(agent.address)).to.equal(2n);
+    expect(await tm.reputation(agent.address)).to.equal(AMOUNT * 9n);
+  });
+
   it("HTTP: health, broken JSON, bad input, and the success path", async () => {
     const server = srv.createServer(ctx).listen(0);
     await new Promise((r) => server.once("listening", r));

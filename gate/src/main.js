@@ -37,7 +37,10 @@ if (remote !== chainId) { console.error(`RPC is on chain ${remote}, expected ${c
 const policy = env.POLICY_ADDRESS ? getAddress(env.POLICY_ADDRESS) : null;
 const signers = (env.VERIFIER_KEYS || "").split(",").map((s) => s.trim()).filter(Boolean).map((k) => privateKeyToAccount(k));
 if (policy) {
-  if (signers.length < 2) { console.error("POLICY_ADDRESS is set but VERIFIER_KEYS holds fewer than 2 keys — the policy is 2-of-3."); process.exit(1); }
+  const required = Number(await publicClient.readContract({ address: policy, abi: policyAbi, functionName: "threshold" }));
+  const uniqueSigners = new Set(signers.map((s) => s.address.toLowerCase()));
+  if (uniqueSigners.size !== signers.length) { console.error("VERIFIER_KEYS contains duplicate verifier keys."); process.exit(1); }
+  if (uniqueSigners.size < required) { console.error(`POLICY_ADDRESS requires ${required} distinct verifier key(s), but VERIFIER_KEYS holds ${uniqueSigners.size}.`); process.exit(1); }
   // Reads and writes must target the same state layer: the policy writes to its
   // wired Receipts, and TGENTIC_ADDRESS is what the used-check reads.
   const wired = await publicClient.readContract({ address: policy, abi: policyAbi, functionName: "receipts" });
@@ -46,7 +49,7 @@ if (policy) {
     const ok = await publicClient.readContract({ address: policy, abi: policyAbi, functionName: "isVerifier", args: [s.address] });
     if (!ok) { console.error(`VERIFIER_KEYS contains a non-verifier of the policy: ${s.address}`); process.exit(1); }
   }
-  console.log(`v2 policy mode: ${signers.length} verifier key(s), submitter ${walletClient.account.address}`);
+  console.log(`v2 policy mode: ${signers.length}/${required} verifier key(s), submitter ${walletClient.account.address}`);
 }
 // Without a policy the gate writes tallies with its own key — the single-EOA
 // authority the v2 line exists to remove. That mode must be opted into

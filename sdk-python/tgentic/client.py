@@ -93,8 +93,19 @@ class Client:
                         "topics": topics,
                     }])
                     break
-                except RuntimeError:
-                    if end <= cursor:
+                except RuntimeError as exc:
+                    msg = str(exc).lower()
+                    is_non_range = bool(
+                        re.search(r"\b(429|rate[\s_-]*limit\w*|too many requests|unauthorized|forbidden)\b", msg)
+                    )
+                    is_range_err = not is_non_range and (
+                        "-32005" in msg
+                        or bool(re.search(
+                            r"\b(range|max[\s_-]*block\w*|too many results|more than|exceed\w*|response size|timed out|query timeout|span|window)\b",
+                            msg,
+                        ))
+                    )
+                    if not is_range_err or end <= cursor:
                         raise
                     end = cursor + (end - cursor) // 2
             logs.extend(page)
@@ -134,16 +145,28 @@ class Client:
 
     def recent(self, n=10):
         """The latest n receipts across all agents."""
+        if not isinstance(n, int) or isinstance(n, bool) or n <= 0:
+            return []
         return self._tallied()[-n:][::-1]
 
     def top(self, limit=100):
-        """Leaderboard rows: one entry per agent with a score and flags."""
-        agents = []
+        """Leaderboard rows: one entry per agent, ranked by counted score, with flags."""
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
+            return []
+        by_agent = {}
         for r in self._tallied():
-            if r["agent"] not in agents:
-                agents.append(r["agent"])
-        return [{**self.score(a), "flags": self.risk(a)["flags"]}
-                for a in agents[:limit]]
+            key = r["agent"].lower()
+            by_agent.setdefault(key, []).append(r)
+        # Rank via score() alone (1 eth_call/agent) so full state reads only run for top `limit`.
+        ranked = sorted(
+            ((self._view_uint("score", ("address", alogs[0]["agent"])), alogs) for alogs in by_agent.values()),
+            key=lambda pair: pair[0],
+            reverse=True,
+        )
+        return [
+            {**self.score(alogs[0]["agent"]), "flags": compute_flags(alogs, alogs[0]["agent"])["flags"]}
+            for _, alogs in ranked[:limit]
+        ]
 
     def verify(self, agent):
         """The one call a hiring flow needs: score + signals in one object."""

@@ -29,11 +29,11 @@ export function validateManifest(m) {
   const errors = [];
   if (!m || typeof m !== "object") return ["manifest is not an object"];
   if (m.type !== MANIFEST_TYPE) errors.push(`type must be ${MANIFEST_TYPE}`);
-  if (!Number.isInteger(m.version) || m.version < 1) errors.push("version must be a positive integer");
-  if (!Number.isInteger(m.chainId) || m.chainId < 1) errors.push("chainId must be a positive integer");
+  if (!Number.isSafeInteger(m.version) || m.version < 1) errors.push("version must be a positive safe integer");
+  if (!Number.isSafeInteger(m.chainId) || m.chainId < 1) errors.push("chainId must be a positive safe integer");
   if (!/^0x[0-9a-fA-F]{40}$/.test(m.agent ?? "")) errors.push("agent must be an address");
-  if (m.agentId !== undefined && (!Number.isInteger(m.agentId) || m.agentId < 0))
-    errors.push("agentId must be a non-negative integer when present");
+  if (m.agentId !== undefined && (!Number.isSafeInteger(m.agentId) || m.agentId < 0))
+    errors.push("agentId must be a non-negative safe integer when present");
   if (typeof m.name !== "string" || m.name.length < 1 || m.name.length > 200)
     errors.push("name must be a 1-200 char string");
   if (!Array.isArray(m.endpoints))
@@ -76,13 +76,21 @@ export async function signManifest(walletClient, manifest) {
 }
 
 /**
- * Verify shape + signature. The recovered signer must be the agent address
- * itself or one of the declared signingKeys — the agent field always anchors
- * the tally identity; delegated keys may act for it (that is what makes key
- * rotation possible later). Pure ecrecover — works offline, no client needed.
+ * Verify shape + signature.
+ * Without a trusted predecessor manifest, only `m.agent` itself may anchor
+ * the manifest — self-declared `signingKeys` inside an unverified document
+ * cannot authorize themselves. To verify a rotated manifest signed by a
+ * delegated key, pass `{ previous }` (the latest verified predecessor manifest
+ * for the same agent & chain); `m.version` must equal `previous.version + 1`
+ * and the signer must be `m.agent` or listed in `previous.signingKeys`.
+ * For multi-hop rotations (v1 -> v2 -> v3), use `verifyManifestChain`.
+ * Pure ecrecover — works offline, no client needed.
+ * @param {object} m
+ * @param {object} [opts]
+ * @param {object} [opts.previous] predecessor manifest authorizing delegated keys
  * @returns {Promise<{ok:boolean, signer?:string, errors:string[]}>}
  */
-export async function verifyManifest(m) {
+export async function verifyManifest(m, opts) {
   const errors = validateManifest(m);
   if (errors.length) return { ok: false, errors };
   let signer;
@@ -91,8 +99,58 @@ export async function verifyManifest(m) {
   } catch {
     return { ok: false, errors: ["signature does not recover"] };
   }
-  const candidates = [m.agent, ...(m.signingKeys ?? [])].map((a) => a.toLowerCase());
-  return candidates.includes(signer)
+  const previous = opts && typeof opts === "object" ? opts.previous : undefined;
+  const authorized = [m.agent.toLowerCase()];
+  if (previous !== undefined) {
+    const prevCheck = await verifyManifest(previous);
+    if (!prevCheck.ok) return { ok: false, errors: ["previous manifest is invalid"] };
+    if (previous.agent.toLowerCase() !== m.agent.toLowerCase() || previous.chainId !== m.chainId) {
+      return { ok: false, errors: ["previous manifest does not match agent or chainId"] };
+    }
+    if (m.version !== previous.version + 1) {
+      return { ok: false, errors: ["version must equal previous manifest version + 1"] };
+    }
+    for (const k of previous.signingKeys ?? []) authorized.push(k.toLowerCase());
+  }
+  return authorized.includes(signer)
     ? { ok: true, signer, errors: [] }
-    : { ok: false, errors: ["signature not from agent or a declared signingKey"] };
+    : { ok: false, errors: ["signature not from agent or a previously authorized signingKey"] };
+}
+
+/**
+ * Verify an ordered rotation chain `[v1, v2, ...]` from an agent-signed root.
+ * Each link must match `agent` and `chainId`, increment `version` by exactly 1,
+ * and be signed by `agent` or a key present in the immediately preceding link's
+ * `signingKeys` (so keys revoked in an earlier version cannot sign later links).
+ * @param {object[]} chain
+ * @returns {Promise<{ok:boolean, signer?:string, errors:string[]}>}
+ */
+export async function verifyManifestChain(chain) {
+  if (!Array.isArray(chain) || chain.length === 0) return { ok: false, errors: ["chain must be a non-empty array"] };
+  let res = await verifyManifest(chain[0]);
+  if (!res.ok) return res;
+  for (let i = 1; i < chain.length; i++) {
+    const prev = chain[i - 1];
+    const curr = chain[i];
+    const errors = validateManifest(curr);
+    if (errors.length) return { ok: false, errors };
+    if (curr.agent.toLowerCase() !== prev.agent.toLowerCase() || curr.chainId !== prev.chainId) {
+      return { ok: false, errors: ["manifest chain does not match agent or chainId"] };
+    }
+    if (curr.version !== prev.version + 1) {
+      return { ok: false, errors: ["manifest chain versions must increment by 1"] };
+    }
+    let signer;
+    try {
+      signer = (await recoverMessageAddress({ message: manifestMessage(curr), signature: curr.signature })).toLowerCase();
+    } catch {
+      return { ok: false, errors: ["signature does not recover"] };
+    }
+    const authorized = [curr.agent.toLowerCase(), ...(prev.signingKeys ?? []).map((k) => k.toLowerCase())];
+    if (!authorized.includes(signer)) {
+      return { ok: false, errors: ["signature not from agent or a previously authorized signingKey"] };
+    }
+    res = { ok: true, signer, errors: [] };
+  }
+  return res;
 }
