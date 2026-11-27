@@ -42,19 +42,22 @@ function serveStatic(root, url, res) {
 
 /** Thin HTTP layer over handleTally: GET /health, GET /risk, POST /tally, + static dapp.
  *  ratePerMinute: application-layer request budget per IP (the chain sequences FCFS — no fee market to lean on). */
-export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMinute = 30 } = {}) {
+export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMinute = 30, mcpRatePerMinute = 120 } = {}) {
   const buckets = new Map(); // ip -> { count, windowStart } — fixed windows, swept on write
-  const allow = (ip) => {
+  // MCP sessions are multi-call by design (initialize → tools/list → several
+  // tools/call), and one indexer may probe the endpoint on behalf of many
+  // agents — so /mcp gets its own budget, keyed per ip+path.
+  const allow = (key, limit) => {
     const now = Date.now();
-    const b = buckets.get(ip);
+    const b = buckets.get(key);
     if (!b || now - b.windowStart >= 60_000) {
-      buckets.set(ip, { count: 1, windowStart: now });
+      buckets.set(key, { count: 1, windowStart: now });
       if (buckets.size > 10_000) { // keep the map bounded under address-spoof floods
         for (const [k, v] of buckets) if (now - v.windowStart >= 60_000) buckets.delete(k);
       }
       return true;
     }
-    return ++b.count <= ratePerMinute;
+    return ++b.count <= limit;
   };
   // The socket peer is the edge proxy in production (Railway), so the real client
   // IP comes from X-Forwarded-For. The service is only reachable through that proxy,
@@ -104,8 +107,11 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
 
     // Costly paths get an application-layer request budget — the chain sequences
     // first-come-first-served, so there is no fee market to lean on.
-    if ((req.method === "POST" && (pathname === "/tally" || pathname === "/mcp")) || (req.method === "GET" && pathname === "/risk")) {
-      if (!allow(clientIp(req))) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
+    if (req.method === "POST" && pathname === "/mcp") {
+      if (!allow(`${clientIp(req)}:mcp`, mcpRatePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
+    }
+    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && pathname === "/risk")) {
+      if (!allow(clientIp(req), ratePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 
     if (req.method === "GET" && pathname === "/risk") {
