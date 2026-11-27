@@ -1,6 +1,21 @@
 # Changelog
 
 
+## Unreleased
+
+Roadmap Step 6 (agent identity), started:
+
+- **Signed agent manifests** (`tgentic/agent-manifest/1`): name, endpoints,
+  authorized signing keys — EIP-191 signed, verifiable offline
+  (`gate/src/manifest.js`, `tools/verify-manifest.mjs`). Manifests for all
+  7 mainnet agents committed under `manifests/`, each signed by its own
+  agent wallet.
+- **ERC-8004 registration files updated on-chain**: each of the 7 agents'
+  `setAgentURI` now declares its profile (`web`), live risk API (`api`),
+  and signed manifest link — plus a brand image. `uriUpdateTx` per agent
+  recorded in `web/src/app/erc8004.js`.
+
+
 ## 1.8.0 — 2026-11-26
 
 Roadmap Step 5 (assurance & scale), everything completable from inside:
