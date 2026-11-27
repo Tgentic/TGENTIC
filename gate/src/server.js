@@ -4,6 +4,7 @@ import path from "node:path";
 import { getAddress } from "viem";
 import { GateError, handleTally } from "./core.js";
 import { assessAgent } from "./heuristics.js";
+import { handleMcp } from "./mcp.js";
 
 const MAX_BODY = 4096;
 
@@ -83,7 +84,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
 
     // Costly paths get an application-layer request budget — the chain sequences
     // first-come-first-served, so there is no fee market to lean on.
-    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && pathname === "/risk")) {
+    if ((req.method === "POST" && (pathname === "/tally" || pathname === "/mcp")) || (req.method === "GET" && pathname === "/risk")) {
       if (!allow(clientIp(req))) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 
@@ -100,7 +101,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       }
     }
 
-    if (req.method !== "POST" || pathname !== "/tally") {
+    if (req.method !== "POST" || (pathname !== "/tally" && pathname !== "/mcp")) {
       if (webDist && req.method === "GET") return serveStatic(webDist, req.url, res);
       return send(404, { error: "NOT_FOUND" });
     }
@@ -116,6 +117,11 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     }
     let body;
     try { body = JSON.parse(raw); } catch { return send(400, { error: "BAD_JSON", message: "Body must be JSON." }); }
+
+    if (pathname === "/mcp") {
+      const out = await handleMcp(ctx, body);
+      return send(out.status, out.body);
+    }
 
     try {
       return send(200, await handleTally(ctx, body));
