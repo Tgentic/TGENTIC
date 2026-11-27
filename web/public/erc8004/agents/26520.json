@@ -1,8 +1,8 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "TGENTIC reference agent",
-  "description": "Agent on the TGENTIC receipt-verified reputation board (Robinhood Chain). Its score is backed by a locked USDG bond and settled payments — verify live at https://www.tgentic.xyz/app#/lookup/0x85db450017b448439dc63a7c566dd9b9e933d2be. Identity manifest (EIP-191 signed, verifiable offline): https://github.com/Tgentic/TGENTIC/blob/main/manifests/0x85db450017b448439dc63a7c566dd9b9e933d2be.json",
-  "image": "https://www.tgentic.xyz/brand/mark.svg",
+  "description": "Agent on the TGENTIC receipt-verified reputation board (Robinhood Chain). Its score is backed by a locked USDG bond and settled payments \u2014 verify live at https://www.tgentic.xyz/app#/lookup/0x85db450017b448439dc63a7c566dd9b9e933d2be. Identity manifest (EIP-191 signed, verifiable offline): https://github.com/Tgentic/TGENTIC/blob/main/manifests/0x85db450017b448439dc63a7c566dd9b9e933d2be.json",
+  "image": "https://www.tgentic.xyz/brand/agent.jpg",
   "services": [
     {
       "name": "web",
@@ -19,7 +19,15 @@
     {
       "name": "MCP",
       "endpoint": "https://www.tgentic.xyz/mcp",
-      "version": "2025-06-18"
+      "version": "2025-06-18",
+      "type": "mcp",
+      "status": "operational",
+      "tools": [
+        "get_agent_score",
+        "get_agent_risk"
+      ],
+      "description": "Read-only tools over the on-chain reputation state: bond-gated scores and manipulation heuristics.",
+      "healthCheck": "https://www.tgentic.xyz/health"
     }
   ],
   "x402Support": true,
@@ -33,5 +41,22 @@
   "supportedTrust": [
     "reputation",
     "crypto-economic"
+  ],
+  "tags": [
+    "reputation",
+    "x402",
+    "receipts",
+    "verification",
+    "mcp"
+  ],
+  "categories": [
+    "reputation",
+    "infrastructure",
+    "verification"
+  ],
+  "capabilities": [
+    "receipt_verified_scoring",
+    "bond_gated_reputation",
+    "manipulation_heuristics"
   ]
 }
