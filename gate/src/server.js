@@ -33,7 +33,7 @@ function serveStatic(root, url, res) {
   if (!path.extname(serve) && fs.existsSync(`${serve}.html`)) serve += ".html";
   try { if (fs.statSync(serve).isDirectory()) serve = path.join(rootDir, "index.html"); }
   catch { serve = path.join(rootDir, "index.html"); } // ENOENT, EPERM, or a stat race — fall back, never crash
-  const type = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".png": "image/png" }[path.extname(serve)] || "application/octet-stream";
+  const type = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".json": "application/json" }[path.extname(serve)] || "application/octet-stream";
   res.writeHead(200, { "content-type": type, "x-content-type-options": "nosniff", ...SECURITY_HEADERS });
   const stream = fs.createReadStream(serve);
   stream.on("error", () => res.end()); // fd exhaustion or a delete race must not crash the process
