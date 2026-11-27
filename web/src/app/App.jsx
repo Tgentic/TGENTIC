@@ -156,13 +156,16 @@ function Profile({ a }) {
           <h2>ERC-8004 proof</h2>
           <dl className="stats two">
             <div><dt>agentId</dt><dd>#{erc8004Of(a).agentId}</dd></div>
+            <div><dt>Indexed</dt><dd><a href={`https://8004scan.io/agents/robinhood-chain/${erc8004Of(a).agentId}`} target="_blank" rel="noreferrer">8004scan ↗</a></dd></div>
             <div><dt>Registry</dt><dd><a href={`${EXPLORER}/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`} target="_blank" rel="noreferrer">official ↗</a></dd></div>
+            <div><dt>MCP</dt><dd><span className="mono">tgentic.xyz/mcp</span></dd></div>
           </dl>
           <ul className="sigs">
             <li><span className="mono mute">register</span> <a className="mono" href={`${EXPLORER}/tx/${erc8004Of(a).registerTx}`} target="_blank" rel="noreferrer">{short(erc8004Of(a).registerTx)}</a></li>
             {erc8004Of(a).feedbackTxs.map((h) => (
               <li key={h}><span className="mono mute">feedback · proofOfPayment</span> <a className="mono" href={`${EXPLORER}/tx/${h}`} target="_blank" rel="noreferrer">{short(h)}</a></li>
             ))}
+            <li><span className="mono mute">manifest · EIP-191 signed</span> <a className="mono" href={`https://github.com/Tgentic/TGENTIC/blob/main/manifests/${a}.json`} target="_blank" rel="noreferrer">verify ↗</a></li>
           </ul>
         </section>
       ) : (

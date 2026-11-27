@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "TGENTIC bootstrap agent 0",
-  "description": "Agent on the TGENTIC receipt-verified reputation board (Robinhood Chain). Its score is backed by a locked USDG bond and settled payments \u2014 verify live at https://www.tgentic.xyz/app#/lookup/0x962fb7944bed596f9e10c8fc639222b44eb5ad81. Identity manifest (EIP-191 signed, verifiable offline): https://github.com/Tgentic/TGENTIC/blob/main/manifests/0x962fb7944bed596f9e10c8fc639222b44eb5ad81.json",
+  "description": "TGENTIC bootstrap agent 0 on the TGENTIC receipt-verified reputation board (Robinhood Chain). Its score counts only settled USDG payments behind a locked bond \u2014 no self-reports. Live score: tgentic.xyz/app#/lookup/0x962fb7944bed596f9e10c8fc639222b44eb5ad81. Signed identity manifest: github.com/Tgentic/TGENTIC/blob/main/manifests/0x962fb7944bed596f9e10c8fc639222b44eb5ad81.json",
   "image": "https://www.tgentic.xyz/brand/agent.jpg",
   "services": [
     {
@@ -27,7 +27,13 @@
         "get_agent_risk"
       ],
       "description": "Read-only tools over the on-chain reputation state: bond-gated scores and manipulation heuristics.",
-      "healthCheck": "https://www.tgentic.xyz/health"
+      "healthCheck": "https://www.tgentic.xyz/health",
+      "prompts": [
+        "audit_agent"
+      ],
+      "resources": [
+        "resource://tgentic/leaderboard/latest"
+      ]
     }
   ],
   "x402Support": true,
@@ -58,5 +64,9 @@
     "receipt_verified_scoring",
     "bond_gated_reputation",
     "manipulation_heuristics"
-  ]
+  ],
+  "version": "1.0.0",
+  "url": "https://www.tgentic.xyz",
+  "externalLink": "https://github.com/Tgentic/TGENTIC",
+  "documentation": "https://github.com/Tgentic/TGENTIC/tree/main/docs"
 }

@@ -4,7 +4,7 @@
 // could skew. Declared as each agent's `MCP` service in the ERC-8004 file.
 
 import { getAddress, isAddress, parseAbi } from "viem";
-import { assessAgent } from "./heuristics.js";
+import { assessAgent, DEFAULT_FROM_BLOCK, LOG_BLOCK_RANGE } from "./heuristics.js";
 
 const receiptsAbi = parseAbi([
   "function score(address) view returns (uint256)",
@@ -38,6 +38,23 @@ const TOOLS = [
   },
 ];
 
+const RESOURCES = [
+  {
+    uri: "resource://tgentic/leaderboard/latest",
+    name: "TGENTIC counted leaderboard",
+    description: "Bond-gated scores for every agent with counted reputation, read live from the Receipts contract.",
+    mimeType: "application/json",
+  },
+];
+
+const PROMPTS = [
+  {
+    name: "audit_agent",
+    description: "Assess an agent's reputation evidence: pull its counted score, then run the manipulation heuristics before trusting the number.",
+    arguments: [{ name: "agent", description: "0x agent address to audit", required: true }],
+  },
+];
+
 const validAgent = (a) => typeof a === "string" && isAddress(a);
 
 async function callTool(ctx, name, args = {}) {
@@ -54,6 +71,24 @@ async function callTool(ctx, name, args = {}) {
     return assessAgent(ctx.publicClient, { address: ctx.tgentic, agent, fromBlock: ctx.detectFromBlock });
   }
   throw new Error(`unknown tool ${name}`);
+}
+
+const talliedAbi = parseAbi([
+  "event Tallied(address indexed agent, address indexed payer, bytes32 indexed txHash, uint256 amount, uint8 rating)",
+]);
+
+/** The leaderboard resource: every agent with a counted receipt, by score. */
+async function readResource(ctx, uri) {
+  if (uri !== RESOURCES[0].uri) throw new Error(`unknown resource ${uri}`);
+  const logs = await ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedAbi, fromBlock: ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, blockRange: LOG_BLOCK_RANGE });
+  const agents = [...new Set(logs.map((l) => l.args.agent))].slice(0, 50);
+  const rows = await Promise.all(agents.map(async (agent) => ({
+    agent,
+    score: (await ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: "score", args: [agent] })).toString(),
+    receipts: (await ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: "receipts", args: [agent] })).toString(),
+  })));
+  rows.sort((a, b) => (BigInt(b.score) > BigInt(a.score) ? 1 : -1));
+  return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify({ agents: rows, source: ctx.tgentic }) }] };
 }
 
 const result = (id, r) => ({ jsonrpc: "2.0", id, result: r });
@@ -74,8 +109,26 @@ async function handleMessage(ctx, m) {
         serverInfo: SERVER_INFO,
       });
     case "tools/list": return result(id, { tools: TOOLS });
-    case "resources/list": return result(id, { resources: [] });
-    case "prompts/list": return result(id, { prompts: [] });
+    case "resources/list": return result(id, { resources: RESOURCES });
+    case "resources/read": {
+      try {
+        return result(id, await readResource(ctx, params?.uri));
+      } catch (e) {
+        return error(id, -32602, e?.message ?? "resource read failed");
+      }
+    }
+    case "prompts/list": return result(id, { prompts: PROMPTS });
+    case "prompts/get": {
+      if (params?.name !== "audit_agent") return error(id, -32602, `unknown prompt ${params?.name}`);
+      const agent = params?.arguments?.agent ?? "<agent>";
+      return result(id, {
+        description: PROMPTS[0].description,
+        messages: [{ role: "user", content: { type: "text", text:
+          `Audit agent ${agent} on TGENTIC. 1) Call get_agent_score for the bond-gated score and receipt counts. ` +
+          `2) Call get_agent_risk for payer-concentration, timing and amount-cycling heuristics. ` +
+          `3) Report both — a flag is a reason to look closer, not a verdict.` } }],
+      });
+    }
     case "logging/setLevel": return result(id, {});
     case "tools/call": {
       try {

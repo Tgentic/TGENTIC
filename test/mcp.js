@@ -90,6 +90,33 @@ describe("mcp", function () {
     expect(res2.body.error.code).to.equal(-32602);
   });
 
+  it("resources/list + resources/read serve a real leaderboard", async () => {
+    await tally(5);
+    const list = await mcp.handleMcp(ctx, { jsonrpc: "2.0", id: 10, method: "resources/list" });
+    expect(list.body.result.resources[0].uri).to.equal("resource://tgentic/leaderboard/latest");
+    const res = await mcp.handleMcp(ctx, {
+      jsonrpc: "2.0", id: 11, method: "resources/read",
+      params: { uri: "resource://tgentic/leaderboard/latest" },
+    });
+    const data = JSON.parse(res.body.result.contents[0].text);
+    expect(data.agents).to.have.length(1);
+    expect(data.agents[0].agent).to.equal(agent.address);
+    const bad = await mcp.handleMcp(ctx, { jsonrpc: "2.0", id: 12, method: "resources/read", params: { uri: "resource://nope" } });
+    expect(bad.body.error.code).to.equal(-32602);
+  });
+
+  it("prompts/list + prompts/get return the audit template", async () => {
+    const list = await mcp.handleMcp(ctx, { jsonrpc: "2.0", id: 13, method: "prompts/list" });
+    expect(list.body.result.prompts[0].name).to.equal("audit_agent");
+    const res = await mcp.handleMcp(ctx, {
+      jsonrpc: "2.0", id: 14, method: "prompts/get",
+      params: { name: "audit_agent", arguments: { agent: agent.address } },
+    });
+    expect(res.body.result.messages[0].content.text).to.include(agent.address);
+    const bad = await mcp.handleMcp(ctx, { jsonrpc: "2.0", id: 15, method: "prompts/get", params: { name: "nope" } });
+    expect(bad.body.error.code).to.equal(-32602);
+  });
+
   it("notifications get 202 with no body; batches work", async () => {
     const res = await mcp.handleMcp(ctx, { jsonrpc: "2.0", method: "notifications/initialized" });
     expect(res.status).to.equal(202);
