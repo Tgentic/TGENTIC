@@ -12,8 +12,12 @@ Roadmap Step 6 (agent identity), started:
   agent wallet.
 - **ERC-8004 registration files updated on-chain**: each of the 7 agents'
   `setAgentURI` now declares its profile (`web`), live risk API (`api`),
-  and signed manifest link — plus a brand image. `uriUpdateTx` per agent
-  recorded in `web/src/app/erc8004.js`.
+  signed manifest link, and the gate's real `MCP` service — plus a brand
+  image. `uriUpdateTx` per agent recorded in `web/src/app/erc8004.js`.
+- **`/mcp` endpoint**: a real MCP (Model Context Protocol, streamable
+  HTTP/JSON-RPC) service on the gate — `get_agent_score` and
+  `get_agent_risk` tools read the Receipts contract live. This is the
+  declared service the ERC-8004 files now point at, not a stub.
 
 
 ## 1.8.0 — 2026-11-26
