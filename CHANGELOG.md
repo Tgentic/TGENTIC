@@ -9,7 +9,10 @@ Roadmap Step 6 (agent identity), started:
   (tgentic.xyz/erc8004/agents/{id}.json) and all 7 agentURIs point at them —
   the indexer's metadata-refresh rejects data: URIs, which left scores stale.
   /mcp is now full Streamable-HTTP (GET SSE channel, open CORS, resources/
-  prompts/logging methods) so external try-agent probes pass. Owner-auth
+  prompts/logging methods) so external try-agent probes pass. The SSE channel
+  closes promptly (probes treat an open stream as a hang) and /mcp has its own
+  120/min budget (indexers probe once per agent from one IP). All 7 agents
+  report "MCP server with 2 tools" on 8004scan. Owner-auth
   metadata-refresh + health-check + verify-endpoint triggered for all 7
   agents.
 
