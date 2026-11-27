@@ -8,7 +8,7 @@ export const EXPLORER = "https://robinhoodchain.blockscout.com";
 export const ERC8004_AGENTS = {
   "0x85db450017b448439dc63a7c566dd9b9e933d2be": {
     agentId: 26520,
-    uriUpdateTx: "0x2018c058ebc3fdbaac35dc1cefb3319c1f4513dc7d4d9a30c60154dfde047617",
+    uriUpdateTx: "0xb5f3291bfb364a3a5648a700ceee944b891539fa00cfa54489cfd5cf96ec5f68",
     registerTx: "0x1da119bc39af341037678cd5e05da2706313e0db8c06643cfab3d3f273cc3fe5",
     feedbackTxs: [
       "0xa8d45250ab4a474b2ca7e4c997ed93e797c1319fb712dbbf67425b01b60cb367",
@@ -17,37 +17,37 @@ export const ERC8004_AGENTS = {
   },
   "0x962fb7944bed596f9e10c8fc639222b44eb5ad81": {
     agentId: 26521,
-    uriUpdateTx: "0x7049e5c1679e465aff11175307b798c613d9b8915b289928f9b32b5a2146fc72",
+    uriUpdateTx: "0x172b382f6832c917e105ec37268222dfeb1cf9c3d398237cfe6ed4a8668c9f78",
     registerTx: "0x5e8e076c6f6a808a6697f5cfd9b4e1e3cc48084ed335069642103c4f2ed9f59f",
     feedbackTxs: ["0x125b555b83b85ff2a75c355ff212536fdf30e091b5e4441eaca89668426c733d"],
   },
   "0x22b45314537662e3105692756e7ce69ee6ade375": {
     agentId: 26522,
-    uriUpdateTx: "0x87436cd83ca57fd9a364bd3a52fdb348efb9b34e5b7d7e0b1da30f8dca04b1ee",
+    uriUpdateTx: "0x6d18ecba1fccbdf47d8093059358cb0f2d3f24a1cae3d9378870e15d82f5bb86",
     registerTx: "0xe691f656b6491e2b32740bca3b1af04133f1b010308ca192eb408d005c32463b",
     feedbackTxs: ["0xc70282177c6dc98c95417ba4ee29e76337582a0be88f9a71785c13ad91e3490f"],
   },
   "0x71f66286f991ef602a2ef0729375533e43c9c745": {
     agentId: 26523,
-    uriUpdateTx: "0x359b0e655140d9dc7ccd384ddce71adfc512fb6e02b23e5ff0e608fa3122664d",
+    uriUpdateTx: "0x85a7d44e35546de31432f9d92c0a19f3b89270450001d4edf939cd731c6975a8",
     registerTx: "0x5c4607cd279904694e23d47468384813d95b147f16827fa438330885a7bd9e9d",
     feedbackTxs: ["0x1c46f97e4b641dd074f5606c57985d0e76408bbd382a11e6f144ec7b07365bc4"],
   },
   "0x498a547376303a813fa568ee17588a64984d2393": {
     agentId: 26524,
-    uriUpdateTx: "0x1dc1faf0e3969e62b4bf2d6450c937cc980237c07fcaba1050565fb2a0443fbb",
+    uriUpdateTx: "0xadc7f126cb16862c55cc39d274770088a6db577b689082c171beb80872be1e8e",
     registerTx: "0x1803304ced3e2ef6bfa8e8e5149d5920674e79c61a45da862b185198dbd93e54",
     feedbackTxs: ["0x205d9454e90580be398addb6e340fdc31ccc4ca3f39b5a9fa9649e0883a8ffc6"],
   },
   "0xcfd9a341bbe919375e5002240f55da923aabc661": {
     agentId: 26525,
-    uriUpdateTx: "0x1889c16bad9a9255675b6ccc1354054d9733fe018321e465857d0ab24b3e1411",
+    uriUpdateTx: "0x79b8c96630857676852692c0beb70d41769c66c01d9d135ad8e6ea09d1f588dc",
     registerTx: "0x78fcf8642f621e7ed7c4c26d40fbcf48be5aeb0df25f5d2287c2807ee8939823",
     feedbackTxs: ["0xdaa7023b69f3b9c46d40388b1e3dfdfe05df9d86d0eeaa4a073f448d9655ef74"],
   },
   "0xfe97320b08703a971db8d648b5f1662786bcdd9d": {
     agentId: 26526,
-    uriUpdateTx: "0x07e6980bd59f7c61c100a1ca09dc3afa9b0f8ed05974de2d0cc98a65ad7f745b",
+    uriUpdateTx: "0xd58d0f971f3aff1b0c93c9d3ab99285162c5851b85f69f56415e864bd81638eb",
     registerTx: "0xb25772b5aae72bc8ad59eae6ba0824cb56bec9459d23ff080db2d47a3a8ebe15",
     feedbackTxs: ["0xa6591317d533b8a9a550b7a4a8a5fdf8593d1ed4ed6e2612b1db46ae81b3a097"],
   },

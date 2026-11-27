@@ -5,6 +5,14 @@
 
 Roadmap Step 6 (agent identity), started:
 
+- 8004scan readiness: registration files now hosted at canonical URLs
+  (tgentic.xyz/erc8004/agents/{id}.json) and all 7 agentURIs point at them —
+  the indexer's metadata-refresh rejects data: URIs, which left scores stale.
+  /mcp is now full Streamable-HTTP (GET SSE channel, open CORS, resources/
+  prompts/logging methods) so external try-agent probes pass. Owner-auth
+  metadata-refresh + health-check + verify-endpoint triggered for all 7
+  agents.
+
 - **Signed agent manifests** (`tgentic/agent-manifest/1`): name, endpoints,
   authorized signing keys — EIP-191 signed, verifiable offline
   (`gate/src/manifest.js`, `tools/verify-manifest.mjs`). Manifests for all
