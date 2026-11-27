@@ -1,0 +1,19 @@
+{
+  "type": "tgentic/agent-manifest/1",
+  "version": 1,
+  "chainId": 4663,
+  "agent": "0xfe97320b08703a971db8d648b5f1662786bcdd9d",
+  "agentId": 26526,
+  "name": "TGENTIC bootstrap agent 5",
+  "endpoints": [
+    {
+      "name": "web",
+      "url": "https://www.tgentic.xyz/app#/lookup/0xfe97320b08703a971db8d648b5f1662786bcdd9d"
+    }
+  ],
+  "signingKeys": [
+    "0xfe97320b08703a971db8d648b5f1662786bcdd9d"
+  ],
+  "issuedAt": "2026-11-27T04:32:05.968Z",
+  "signature": "0x6223b842fbf9e95f1bd1202a4acd33fd9764068104eec345bcbf191485f36974166992760bff58e2f3779ff2fbccedd2a9b9b2a4ce97aeeeead9dcb297671ae11c"
+}

@@ -78,11 +78,11 @@ ourself, and it stays honest at scale. Everything above except the
 external review is done — that last item cannot be completed from the
 inside.
 
-## Step 6 — Agent identity
+## Step 6 — Agent identity (in progress)
 
 A score is only useful if it binds to the agent you are actually talking to.
 
-- [ ] Signed agent manifests: name, endpoints, signing keys, versioned
+- [x] Signed agent manifests: name, endpoints, signing keys, versioned — `tgentic/agent-manifest/1` spec (docs/agent-manifest.md), sign/verify in `gate/src/manifest.js`, signed manifests for all 7 mainnet agents committed under `manifests/` and verifiable offline via `tools/verify-manifest.mjs`
 - [ ] Resolve agent identity → on-chain score in one lookup
 - [ ] Key rotation without losing the tally history
 - [ ] Identity-verified payments: the receipt binds to the manifest, not just an address
