@@ -74,6 +74,9 @@ async function handleMessage(ctx, m) {
         serverInfo: SERVER_INFO,
       });
     case "tools/list": return result(id, { tools: TOOLS });
+    case "resources/list": return result(id, { resources: [] });
+    case "prompts/list": return result(id, { prompts: [] });
+    case "logging/setLevel": return result(id, {});
     case "tools/call": {
       try {
         const out = await callTool(ctx, params?.name, params?.arguments);

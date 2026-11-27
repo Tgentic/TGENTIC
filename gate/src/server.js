@@ -65,22 +65,41 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
   };
 
   return http.createServer(async (req, res) => {
+    // Route on the pathname only — a query string must not change matching.
+    const pathname = req.url.split("?")[0];
+    // The MCP endpoint serves public read-only data to any client (indexers,
+    // agent browsers) — it gets an open origin regardless of ALLOWED_ORIGIN.
+    const origin = pathname === "/mcp" ? "*" : allowedOrigin;
+
     const send = (status, obj) => {
       res.writeHead(status, {
         ...SECURITY_HEADERS,
         "content-type": "application/json",
-        "access-control-allow-origin": allowedOrigin,
+        "access-control-allow-origin": origin,
         "access-control-allow-methods": "GET, POST, OPTIONS",
-        "access-control-allow-headers": "content-type",
+        "access-control-allow-headers": "content-type, mcp-protocol-version",
       });
       res.end(obj === undefined ? "" : JSON.stringify(obj));
     };
 
     if (req.method === "OPTIONS") return send(204);
-    if (req.method === "GET" && req.url === "/health") return send(200, { ok: true, chainId: ctx.chainId });
+    if (req.method === "GET" && pathname === "/health") return send(200, { ok: true, chainId: ctx.chainId });
 
-    // Route on the pathname only — a query string must not change matching.
-    const pathname = req.url.split("?")[0];
+    // Streamable HTTP transport's optional SSE channel for server-initiated
+    // messages. We never push — heartbeat comments just keep the stream honest.
+    if (req.method === "GET" && pathname === "/mcp") {
+      res.writeHead(200, {
+        ...SECURITY_HEADERS,
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+      });
+      res.write(": tgentic-mcp\n\n");
+      const beat = setInterval(() => res.write(": beat\n\n"), 25_000);
+      req.on("close", () => clearInterval(beat));
+      return;
+    }
 
     // Costly paths get an application-layer request budget — the chain sequences
     // first-come-first-served, so there is no fee market to lean on.
