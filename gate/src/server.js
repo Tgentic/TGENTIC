@@ -86,18 +86,19 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     if (req.method === "GET" && pathname === "/health") return send(200, { ok: true, chainId: ctx.chainId });
 
     // Streamable HTTP transport's optional SSE channel for server-initiated
-    // messages. We never push — heartbeat comments just keep the stream honest.
+    // messages. We never push, and we close promptly — health probes fetch GET
+    // like a normal request and treat a stream that never ends as a hang,
+    // while real MCP clients simply reconnect per the SSE spec.
     if (req.method === "GET" && pathname === "/mcp") {
       res.writeHead(200, {
         ...SECURITY_HEADERS,
         "content-type": "text/event-stream",
         "cache-control": "no-cache",
-        "connection": "keep-alive",
         "access-control-allow-origin": "*",
       });
       res.write(": tgentic-mcp\n\n");
-      const beat = setInterval(() => res.write(": beat\n\n"), 25_000);
-      req.on("close", () => clearInterval(beat));
+      const close = setTimeout(() => res.end(), 1500);
+      req.on("close", () => clearTimeout(close));
       return;
     }
 
