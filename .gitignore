@@ -4,3 +4,5 @@ artifacts
 cache
 __pycache__/
 *.tgz
+_bootstrap-*.json
+.demo-fleet-keys.json

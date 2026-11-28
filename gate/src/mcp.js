@@ -93,7 +93,7 @@ async function callTool(ctx, name, args = {}) {
     return {
       agent,
       agentId: m?.agentId ?? (Number.isInteger(args.agentId) ? args.agentId : null),
-      manifest: m ? { name: m.name, version: m.version, endpoints: m.endpoints, signingKeys: m.signingKeys, issuedAt: m.issuedAt, manifestHash: manifestHash(m), verified: true } : null,
+      manifest: m ? { name: m.name, version: m.version, endpoints: m.endpoints, signingKeys: m.signingKeys, issuedAt: m.issuedAt, manifestHash: manifestHash(m), demo: m.demo === true, verified: true } : null,
       score: score.toString(), reputation: reputation.toString(), receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(), counted: score > 0n,
     };
   }

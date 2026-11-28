@@ -1,0 +1,14 @@
+{
+  "type": "tgentic/agent-manifest/1",
+  "version": 1,
+  "chainId": 4663,
+  "agent": "0x6dF5F2a2FE84279bB9d9fa1A3046CBda8fEaE306",
+  "name": "demo agent 094",
+  "endpoints": [],
+  "signingKeys": [
+    "0x6dF5F2a2FE84279bB9d9fa1A3046CBda8fEaE306"
+  ],
+  "issuedAt": "2026-11-28T05:11:11.184Z",
+  "demo": true,
+  "signature": "0x1dbf43308d3f2c81f7f48c213997145a449011f95e55203b65b02187d621a71f375bdf3aab227714952a6037618ef65d86bcdbf584a423e26fbeb4172afb41321c"
+}
