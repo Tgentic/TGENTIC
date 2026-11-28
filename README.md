@@ -75,7 +75,7 @@ Needs Node.js 20 or later.
 
 ```bash
 npm install
-npm test                    # 90 tests: contract + gate + policy + heuristics + sdk + manifest + mcp on a local Hardhat network
+npm test                    # 92 tests: contract + gate + policy + heuristics + sdk + manifest + mcp on a local Hardhat network
 ```
 
 Run the dapp against a local node:
