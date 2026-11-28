@@ -2,10 +2,30 @@
 // (Step 6). The gate serves this site, so /manifest/<addr> and /manifests
 // are same-origin GETs. Missing store or 404 → null, never a crash.
 
+import { keccak256, toBytes } from "viem";
+
+// Canonical form mirror of gate/src/manifest.js (which imports node:fs and
+// can't be bundled). The hash is derived client-side — the gate serves the
+// raw signed artifact, so anyone can recompute it; same "verify don't trust"
+// rule as the gate itself.
+const sortValue = (v) => {
+  if (Array.isArray(v)) return v.map(sortValue);
+  if (v && typeof v === "object")
+    return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortValue(v[k])]));
+  return v;
+};
+const manifestHash = (m) => {
+  if (!m || typeof m !== "object") return null;
+  const { signature: _sig, ...rest } = m;
+  return keccak256(toBytes(JSON.stringify(sortValue(rest))));
+};
+
 export async function fetchManifest(addr) {
   try {
     const r = await fetch(`/manifest/${addr}`);
-    return r.ok ? await r.json() : null;
+    if (!r.ok) return null;
+    const m = await r.json();
+    return { ...m, manifestHash: manifestHash(m) };
   } catch {
     return null;
   }

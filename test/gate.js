@@ -228,7 +228,10 @@ describe("gate", function () {
       expect(manifests[0].agent).to.equal(agent.address);
       expect(manifests[0].manifestHash).to.equal(mf.manifestHash(manifest));
       const served = await (await fetch(`${base}/manifest/${agent.address}`)).json();
-      expect(served.manifestHash).to.equal(mf.manifestHash(manifest));
+      // /manifest serves the raw signed artifact — no injected fields, so it
+      // can round-trip into /tally without breaking verifyManifest.
+      expect(served.signature).to.equal(manifest.signature);
+      expect(mf.manifestHash(served)).to.equal(mf.manifestHash(manifest));
     } finally {
       server.close();
     }
