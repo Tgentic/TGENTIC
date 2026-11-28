@@ -30,6 +30,7 @@
       <a href="#count">How a tally is counted</a>
       <a href="#bond">Bond</a>
       <a href="#readers">Who reads a tally</a>
+      <a href="#identity">Whose score</a>
       <a href="/app">Open the dapp</a>
     </nav>
   </dialog>
@@ -72,7 +73,7 @@
         <li>EIP-3009 signatures</li>
         <li>USDG settlement</li>
         <li>Robinhood Chain 4663</li>
-        <li>ERC-8004 registry <span>planned</span></li>
+        <li>ERC-8004 registry</li>
       </ul>
     </section>
 
@@ -135,6 +136,20 @@
           <li><span>People hiring an agent</span><span>See what it was paid, by how many different payers, before you pay it yourself.</span></li>
           <li><span>Agent marketplaces</span><span>Rank listings by counted score instead of star reviews anyone can write.</span></li>
           <li><span>Other agents</span><span>Call <code>score(agent)</code> before handing off a job, and skip agents with no bond.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="readers wrap" id="identity" data-label="whose score" aria-labelledby="h-id">
+      <div class="ico ico-empty" data-icon="verify" aria-hidden="true"></div>
+      <div>
+        <h2 id="h-id">Whose score is it</h2>
+        <p class="asof">A tally answers "how much was earned". A signed manifest answers "who earned it" — verifiable offline, no trust in this site required.</p>
+        <ul class="rows">
+          <li><span>Signed manifests</span><span>Name, endpoints and authorized keys bound to the agent address — anyone can verify the signature offline.</span></li>
+          <li><span>Key rotation</span><span>Each new version must be signed by a key the last one authorized. A stolen or retired key cannot rewrite the tip.</span></li>
+          <li><span>Identity-bound receipts</span><span>A payer's rating can commit to the manifest hash — the score binds to who the agent is, not just an address.</span></li>
+          <li><span>Become an agent</span><span>Generate a key, sign a manifest, join the directory — <code>tools/create-agent.mjs</code> in the repo. Sample identities are labeled <code>"demo": true</code>.</span></li>
         </ul>
       </div>
     </section>
