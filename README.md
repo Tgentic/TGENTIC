@@ -91,7 +91,7 @@ Run the gate:
 ```bash
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
-npm start               # :8788 — GET /health, GET /risk?agent=0x…, POST /tally, POST /mcp (MCP), serves web/dist
+npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /manifests, GET /manifest/<addr>, POST /tally, POST /mcp (MCP), serves web/dist
 ```
 
 Read an agent's reputation from your own code (the SDK — mainnet by default):
@@ -134,8 +134,8 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 3. **Manipulation resistance** — shipped on mainnet: on-chain flags (Heuristics 0xe9D4eaa0…), event-based detection at /risk, rate limiting, dapp signals
 4. **Integration** — shipped on mainnet: TypeScript + Python SDKs, ERC-8004 registry live (7 agents, 8 payment-proven feedback, indexed on 8004scan), agent directory, MCP endpoint
 5. **Assurance & scale** — v1→v2 cutover done (all reads + policy-gated writes on v2), gas/log-range profiling shipped; next: external security review
-6. **Agent identity** — in progress: signed manifests live for all 7 agents (`manifests/`, verify offline via `tools/verify-manifest.mjs`); next: identity-to-score resolution, key rotation
-7. **Reputation consumption** — marketplace APIs, hiring flow, viewing-key access, pricing signals
+6. **Agent identity** — shipped on mainnet: signed manifests for all 8 operators + 100 demo-labeled (`manifests/`), chain-of-trust key rotation, manifest-bound tallies, `get_agent_identity` + `GET /manifest/<addr>`
+7. **Reputation consumption** — in progress: `GET /agents` marketplace index (filter/rank by counted score + live flags) shipped; first earning agent (auditor) live at #2 on the board — hiring flow proven end-to-end; next: viewing-key access, pricing signals, webhooks
 8. **Portable receipts** — private-by-choice payers, commitment tree + nullifiers, Noir proofs, batched verification
 9. **Disputes & governance** — slash disputes, appeals, community verifier governance
 10. **The standard** — trust-registry interop, agent-to-agent trust negotiation, standards track

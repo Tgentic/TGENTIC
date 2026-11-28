@@ -3,11 +3,28 @@ import fs from "node:fs";
 import path from "node:path";
 import { getAddress } from "viem";
 import { GateError, handleTally } from "./core.js";
-import { assessAgent } from "./heuristics.js";
+import { assessAgent, computeFlags, DEFAULT_FROM_BLOCK, LOG_BLOCK_RANGE } from "./heuristics.js";
 import { handleMcp } from "./mcp.js";
 import { manifestHash } from "./manifest.js";
 
 const MAX_BODY = 4096;
+
+const talliedEvents = [
+  { type: "event", name: "Tallied", inputs: [
+    { type: "address", name: "agent", indexed: true },
+    { type: "address", name: "payer", indexed: true },
+    { type: "bytes32", name: "txHash", indexed: true },
+    { type: "uint256", name: "amount" },
+    { type: "uint8", name: "rating" },
+  ] },
+];
+const receiptsAbi = [
+  { type: "function", name: "score", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "reputation", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "receipts", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "payers", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "bond", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
+];
 
 const SECURITY_HEADERS = {
   "strict-transport-security": "max-age=31536000",
@@ -114,6 +131,49 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       return m ? send(200, m) : send(404, { error: "NO_MANIFEST", message: "No verified manifest for this agent." });
     }
 
+    // Step 7: marketplace index — rank/filter every agent with receipts.
+    // One Tallied scan shared across all rows; flags come from the same
+    // computeFlags the dapp and SDK use, no extra RPC per agent.
+    // Query: ?minScore= ?minReceipts= ?flagged=true|false ?sort=score|receipts|payers ?limit=n
+    if (req.method === "GET" && pathname === "/agents") {
+      try {
+        const q = new URL(req.url, "https://x").searchParams;
+        const logs = await ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedEvents, fromBlock: ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, blockRange: LOG_BLOCK_RANGE });
+        const byAgent = new Map();
+        for (const l of logs) {
+          const a = l.args.agent.toLowerCase();
+          if (!byAgent.has(a)) byAgent.set(a, []);
+          byAgent.get(a).push({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash });
+        }
+        const rows = await Promise.all([...byAgent.entries()].slice(0, 100).map(async ([agent, mine]) => {
+          const read = (fn) => ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: fn, args: [agent] });
+          const [score, reputation, receipts, payers, bond] = await Promise.all(["score", "reputation", "receipts", "payers", "bond"].map(read));
+          const risk = computeFlags(mine, agent);
+          const manifest = ctx.manifests?.byAgent?.get(agent);
+          return {
+            agent: getAddress(agent),
+            score: score.toString(), reputation: reputation.toString(),
+            receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(),
+            counted: score > 0n, flagged: risk.flagged, flags: risk.flags,
+            ...(manifest ? { name: manifest.name, manifestVerified: true } : {}),
+          };
+        }));
+        const minScore = q.get("minScore") ? BigInt(q.get("minScore")) : 0n;
+        const minReceipts = q.get("minReceipts") ? BigInt(q.get("minReceipts")) : 0n;
+        const flagged = q.get("flagged");
+        const sort = { receipts: "receipts", payers: "payers" }[q.get("sort")] ?? "score";
+        const limit = Math.min(Math.max(parseInt(q.get("limit") ?? "50", 10) || 50, 1), 100);
+        const agents = rows
+          .filter((r) => BigInt(r.score) >= minScore && BigInt(r.receipts) >= minReceipts && (flagged === null || r.flagged === (flagged === "true")))
+          .sort((a, b) => (BigInt(b[sort]) > BigInt(a[sort]) ? 1 : -1))
+          .slice(0, limit);
+        return send(200, { agents, total: rows.length, source: ctx.tgentic });
+      } catch (e) {
+        console.error("agents failed:", e?.shortMessage ?? e?.message ?? e);
+        return send(500, { error: "INTERNAL", message: "The agents read failed." });
+      }
+    }
+
     // Streamable HTTP transport's optional SSE channel for server-initiated
     // messages. We never push, and we close promptly — health probes fetch GET
     // like a normal request and treat a stream that never ends as a hang,
@@ -142,7 +202,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     if (req.method === "POST" && pathname === "/mcp") {
       if (!allow(`${clientIp(req)}:mcp`, mcpRatePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
-    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && pathname === "/risk")) {
+    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents"))) {
       if (!allow(clientIp(req), ratePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 

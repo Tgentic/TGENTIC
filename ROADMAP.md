@@ -91,8 +91,8 @@ A score is only useful if it binds to the agent you are actually talking to.
 
 ## Step 7 — Reputation consumption
 
-- [ ] Marketplace APIs: filter and rank agents by counted score
-- [ ] Hiring flow reference: agree → pay (x402) → rate → tally, as one client integration
+- [x] Marketplace APIs: filter and rank agents by counted score — `GET /agents` ranks every agent by score/receipts/payers with live manipulation flags, filterable via `?minScore=&minReceipts=&flagged=&sort=&limit=` (shared `computeFlags`, one log scan, rate-limited)
+- [x] Hiring flow reference: agree → pay (x402) → rate → tally, as one client integration — proven live by `agents/auditor`: real x402 payments settle on-chain via a whitelisted facilitator, payer feedback is signed manifest-bound, tallies land on the v2 contract (18 receipts, 3 payers, rank #2)
 - [ ] View-only receipt access: payers delegate read access to marketplaces and auditors with viewing keys — never spending power
 - [ ] Reputation-weighted pricing signals for x402 endpoints
 - [ ] Webhooks / event streams for score changes

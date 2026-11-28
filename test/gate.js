@@ -237,6 +237,36 @@ describe("gate", function () {
     }
   });
 
+  it("HTTP: GET /agents ranks and filters scored agents with live flags", async () => {
+    // give the agent one tallied receipt so it appears on the index
+    const txHash = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature: await sign(payerW, txHash, 5) });
+    ctx.detectFromBlock = 0n; // local chain blocks are tiny; prod sets this to the v2 deploy block
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const all = await (await fetch(`${base}/agents`)).json();
+      expect(all.total).to.equal(1);
+      const row = all.agents[0];
+      expect(row.agent.toLowerCase()).to.equal(agent.address.toLowerCase());
+      expect(row.score).to.equal((AMOUNT * 5n).toString());
+      expect(row.receipts).to.equal("1");
+      expect(row.payers).to.equal("1");
+      expect(row.counted).to.equal(true);
+      expect(row).to.have.property("flagged");
+
+      // filters actually filter
+      expect((await (await fetch(`${base}/agents?minScore=1`)).json()).agents).to.have.length(1);
+      expect((await (await fetch(`${base}/agents?minScore=999999999999`)).json()).agents).to.have.length(0);
+      expect((await (await fetch(`${base}/agents?minReceipts=2`)).json()).agents).to.have.length(0);
+      const clean = await (await fetch(`${base}/agents?flagged=false`)).json();
+      expect(clean.agents.every((a) => !a.flagged)).to.equal(true);
+    } finally {
+      server.close();
+    }
+  });
+
   it("HTTP: GET /mcp gives browsers the docs page and MCP clients the SSE channel", async () => {
     const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
     const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));
