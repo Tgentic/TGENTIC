@@ -75,7 +75,7 @@ connect wallet → "Buy signed report · 0.01 USDG"</pre>
 curl -s https://www.tgentic.xyz/audit/report?agent=0x… \
   -H 'payment-signature: &lt;base64 payment payload&gt;'
 → 200 signed report + PAYMENT-RESPONSE {"success":true,"transaction":"0x…"}</pre>
-      <p class="note">Settlement is our own whitelisted facilitator wallet — the payment tallies as a receipt for the auditor, so every sale grows (or damages) the reputation it sells. Free preview, unsigned: the same fields on the audit page in the dapp.</p>
+      <p class="note">Reputation-weighted pricing: buyers with a counted score pay less — 50% off at score ≥ 1M, 25% at ≥ 100k. Pass <code>&amp;buyer=0x…</code> for your price, or check <code>GET /audit/quote?buyer=0x…</code>. Settlement is our own whitelisted facilitator wallet — the payment tallies as a receipt for the auditor, so every sale grows (or damages) the reputation it sells. Free preview, unsigned: the same fields on the audit page in the dapp.</p>
     </section>
 
     <section class="close wrap" id="source" data-label="read the source" aria-labelledby="h-source">

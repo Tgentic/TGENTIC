@@ -4,7 +4,7 @@ import { createPublicClient, custom, defineChain, http, isAddress } from "viem";
 import { computeFlags } from "./flags.js";
 
 export { computeFlags };
-export { createGateClient } from "./gate.js";
+export { createGateClient, signViewGrant, encodeViewGrant } from "./gate.js";
 
 export const chain = defineChain({
   id: 4663,

@@ -162,9 +162,48 @@ export interface GateClient {
   manifest(a: string): Promise<unknown>;
   manifests(): Promise<{ manifests: unknown[] }>;
   health(): Promise<{ ok: boolean; chainId: number; manifests: number }>;
-  auditOffer(a: string): Promise<PaymentRequirements>;
+  payer(a: string, opts?: { viewer?: string; grant?: ViewGrant | string }): Promise<PayerLedger>;
+  quote(buyer: string): Promise<AuditQuote>;
+  auditOffer(a: string, opts?: { buyer?: string }): Promise<PaymentRequirements>;
   buyAudit(a: string, walletClient: { signTypedData(args: unknown): Promise<string>; account?: { address: string } }, account?: string): Promise<{ report: AuditReport; settle: SettleResult | null }>;
   events(onTally: (ev: TallyEvent) => void, opts?: { signal?: AbortSignal }): Promise<{ close(): Promise<void> }>;
 }
 
 export function createGateClient(opts?: { gateUrl?: string; fetchImpl?: typeof fetch }): GateClient;
+
+export interface PayerLedger {
+  payer: string;
+  receiptsGiven: number;
+  uniqueAgents: number;
+  totalPaid: string;
+  avgRating: number | null;
+  receipts: Array<{ agent: string; amount: string; rating: number; txHash: string; blockNumber: string; tallyTx: string }>;
+  viewGrant?: { valid: boolean; viewer?: string; expiresAt?: number; reason?: string };
+}
+
+export interface ViewGrant {
+  type: string;
+  payer: string;
+  viewer: string;
+  scope: string;
+  expiresAt: number;
+  signature: string;
+}
+
+export interface AuditQuote {
+  buyer: string;
+  base: string;
+  amount: string;
+  tier: string;
+  discountBps: number;
+  buyerScore: string;
+  counted: boolean;
+  tiers: Array<{ minScore: string; discountBps: number; label: string }>;
+}
+
+export function signViewGrant(
+  signer: { signMessage(args: { message: string }): Promise<string> },
+  opts: { payer: string; viewer: string; expiresAt: number },
+): Promise<ViewGrant>;
+
+export function encodeViewGrant(grant: ViewGrant): string;

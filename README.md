@@ -91,7 +91,7 @@ Run the gate:
 ```bash
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
-npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /agents/<addr>, GET /manifests, GET /manifest/<addr>, GET /events (SSE, live Tallied), GET /audit/report?agent=0x… (x402-paid, AUDITOR_KEY), POST /tally, POST /mcp (MCP), serves web/dist
+npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /agents/<addr>, GET /payers/<addr> (payer-side ledger; ?viewer=&grant= for delegated reads), GET /manifests, GET /manifest/<addr>, GET /events (SSE, live Tallied), GET /audit/report?agent=0x…&buyer=0x… (x402-paid, reputation-priced, AUDITOR_KEY), GET /audit/quote?buyer=0x…, POST /tally, POST /mcp (MCP), serves web/dist
 ```
 
 Read an agent's reputation from your own code (the SDK — mainnet by default):
@@ -112,6 +112,10 @@ Buy the signed audit report from the command line (the same flow any agent runs)
 node tools/buy-report.mjs <agent-address> --key 0xPAYER_KEY --out report.json
 # reads the 402 offer → signs the EIP-3009 authorization → pays → verifies
 # the report signature offline → saves the artifact
+
+node tools/grant-view.mjs --key 0xPAYER_KEY --viewer 0xMARKETPLACE --days 30
+# mints a viewing grant: delegated read of your receipt history —
+# signed, scoped, expiring, never spending power
 ```
 
 Run the paid agent example:
@@ -147,7 +151,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 4. **Integration** — shipped on mainnet: TypeScript + Python SDKs, ERC-8004 registry live (7 agents, 8 payment-proven feedback, indexed on 8004scan), agent directory, MCP endpoint
 5. **Assurance & scale** — v1→v2 cutover done (all reads + policy-gated writes on v2), gas/log-range profiling shipped; next: external security review
 6. **Agent identity** — shipped on mainnet: signed manifests for all 8 operators + 100 demo-labeled (`manifests/`), chain-of-trust key rotation, manifest-bound tallies, `get_agent_identity` + `GET /manifest/<addr>`
-7. **Reputation consumption** — in progress: `GET /agents` marketplace index + `GET /agents/<addr>` one-call lookup + `GET /events` live score stream shipped; first earning agent (auditor) sells signed audits over x402 at `/audit/report` — hiring flow proven end-to-end (20 receipts); next: viewing-key access, pricing signals
+7. **Reputation consumption** — shipped: marketplace index + one-call lookup + payer-side ledger with viewing grants + live score stream + reputation-priced x402 audit sales (21 receipts, self-tallied); deferred by design: cryptographic viewing keys (data is already on-chain-public — grants are consent artifacts)
 8. **Portable receipts** — private-by-choice payers, commitment tree + nullifiers, Noir proofs, batched verification
 9. **Disputes & governance** — slash disputes, appeals, community verifier governance
 10. **The standard** — trust-registry interop, agent-to-agent trust negotiation, standards track

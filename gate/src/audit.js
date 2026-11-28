@@ -51,14 +51,42 @@ const authTypes = {
 
 const b64 = (s) => Buffer.from(s, "utf8").toString("base64");
 
-/** The payment terms every buyer must satisfy — one asset, one network, one price. */
-export function auditRequirements(ctx) {
+// Reputation-weighted pricing: a buyer with a counted score pays less. The
+// discount curve is public — same function prices the 402 offer, the quote
+// endpoint, and the verification of whatever the buyer actually signed.
+export const PRICE_TIERS = [
+  { minScore: 1_000_000n, discountBps: 5000, label: "trusted (score ≥ 1M)" },
+  { minScore: 100_000n, discountBps: 2500, label: "established (score ≥ 100k)" },
+];
+export function priceForScore(score, counted, base) {
+  const b = BigInt(base);
+  if (!counted) return { amount: b, discountBps: 0, tier: "unrated" };
+  for (const t of PRICE_TIERS)
+    if (score >= t.minScore) {
+      const amount = (b * (10_000n - BigInt(t.discountBps))) / 10_000n;
+      return { amount, discountBps: t.discountBps, tier: t.label };
+    }
+  return { amount: b, discountBps: 0, tier: "standard" };
+}
+
+/** The price a specific buyer pays — reads their counted score on chain. */
+export async function auditPrice(ctx, buyer) {
+  const base = BigInt(ctx.audit.amount);
+  if (!buyer) return { amount: base, discountBps: 0, tier: "standard", score: "0", counted: false };
+  const score = await ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: "score", args: [getAddress(buyer.toLowerCase())] });
+  const counted = score > 0n;
+  return { ...priceForScore(score, counted, base), score: score.toString(), counted };
+}
+
+/** The payment terms a buyer must satisfy — one asset, one network, and a
+ *  price that shrinks with the buyer's own reputation. */
+export function auditRequirements(ctx, price) {
   const a = ctx.audit;
   return {
     scheme: "exact",
     network: `eip155:${ctx.chainId}`,
     asset: ctx.usdg,
-    amount: a.amount,
+    amount: (price?.amount ?? BigInt(a.amount)).toString(),
     payTo: a.payTo,
     maxTimeoutSeconds: 300,
     extra: USDG_DOMAIN,
@@ -120,21 +148,24 @@ export async function buildAuditReport(ctx, agent) {
 /** Decode and check the buyer's EIP-3009 authorization — cheap rejects before any gas. */
 async function verifyPayment(ctx, payload) {
   const a = ctx.audit;
-  const req = auditRequirements(ctx);
   const auth = payload?.payload?.authorization;
   const signature = payload?.payload?.signature;
   const invalid = (reason) => ({ isValid: false, invalidReason: reason });
   if (!auth || !isHex(signature)) return invalid("malformed_payload");
   const accepted = payload?.accepted;
-  if (accepted?.scheme !== "exact" || accepted?.network !== req.network) return invalid("unsupported_scheme_or_network");
+  if (accepted?.scheme !== "exact" || accepted?.network !== `eip155:${ctx.chainId}`) return invalid("unsupported_scheme_or_network");
   let to, value, validAfter, validBefore, from;
   try {
     from = getAddress(auth.from); to = getAddress(auth.to);
     value = BigInt(auth.value); validAfter = BigInt(auth.validAfter); validBefore = BigInt(auth.validBefore);
   } catch { return invalid("malformed_authorization"); }
   if (!isHex(auth.nonce) || auth.nonce.length !== 66) return invalid("malformed_authorization");
-  if (to.toLowerCase() !== req.payTo.toLowerCase()) return invalid("recipient_mismatch");
-  if (value !== BigInt(req.amount)) return invalid("amount_mismatch");
+  if (to.toLowerCase() !== a.payTo.toLowerCase()) return invalid("recipient_mismatch");
+  // The buyer's price is whatever their reputation earns them — recompute it
+  // for the signer rather than trusting a stale offer amount. Overpayment is
+  // the buyer's explicit choice in the signature; underpayment is rejected.
+  const price = await auditPrice(ctx, from);
+  if (value < price.amount) return invalid("amount_mismatch");
   const now = BigInt(Math.floor(Date.now() / 1000));
   if (now < validAfter) return invalid("authorization_not_yet_valid");
   if (now >= validBefore) return invalid("authorization_expired");
@@ -190,14 +221,18 @@ export async function handleAudit(ctx, req) {
   const agent = q.get("agent") ?? "";
   if (!/^0x[0-9a-fA-F]{40}$/.test(agent))
     return { status: 400, headers: {}, body: { error: "BAD_AGENT", message: "Send ?agent=0x… — a 20-byte hex address." } };
+  const buyerParam = q.get("buyer") ?? "";
+  const buyer = /^0x[0-9a-fA-F]{40}$/.test(buyerParam) ? buyerParam : null;
+  const price = await auditPrice(ctx, buyer);
 
-  const requirements = auditRequirements(ctx);
+  const requirements = auditRequirements(ctx, price);
   const resource = {
     url: `https://www.tgentic.xyz/audit/report?agent=${agent}`,
     description: "Signed agent-trust audit: on-chain score, receipt trail, manipulation heuristics and identity manifest — verified and attested by the auditor",
     mimeType: "application/json",
   };
-  const paymentRequired = { x402Version: 2, error: "Payment required", resource, accepts: [requirements] };
+  const paymentRequired = { x402Version: 2, error: "Payment required", resource, accepts: [requirements],
+    ...(buyer ? { pricing: { buyer: getAddress(buyer.toLowerCase()), tier: price.tier, discountBps: price.discountBps, buyerScore: price.score, base: ctx.audit.amount } } : {}) };
   const need402 = (error) => ({
     status: 402,
     headers: { "payment-required": b64(JSON.stringify({ ...paymentRequired, error })), "cache-control": "no-store" },

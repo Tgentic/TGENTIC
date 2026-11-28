@@ -343,6 +343,83 @@ describe("gate", function () {
     }
   });
 
+  it("HTTP: GET /payers/<addr> returns the payer-side ledger; a viewing grant marks it delegated", async () => {
+    const { signViewGrant, encodeGrant } = await import("../gate/src/grants.js");
+    const txHash = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash, rating: 4, signature: await sign(payerW, txHash, 4) });
+    const second = await pay({ to: other.address });
+    await core.handleTally(ctx, { agent: other.address, txHash: second, rating: 3, signature: await sign(payerW, second, 3, other.address) });
+    ctx.detectFromBlock = 0n;
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const res = await fetch(`${base}/payers/${payer.address}`);
+      expect(res.status).to.equal(200);
+      const body = await res.json();
+      expect(body.receiptsGiven).to.equal(2);
+      expect(body.uniqueAgents).to.equal(2);
+      expect(body.totalPaid).to.equal((2n * AMOUNT).toString());
+      expect(body.receipts).to.have.length(2);
+      // a valid viewing grant marks the read as delegated to that viewer
+      const grant = await signViewGrant(payerW, { payer: payer.address, viewer: other.address, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+      const delegated = await (await fetch(`${base}/payers/${payer.address}?viewer=${other.address}&grant=${encodeGrant(grant)}`)).json();
+      expect(delegated.viewGrant.valid).to.equal(true);
+      expect(delegated.viewGrant.viewer.toLowerCase()).to.equal(other.address.toLowerCase());
+      // expired, forged, and mismatched grants are flagged — never trusted
+      const expired = await signViewGrant(payerW, { payer: payer.address, viewer: other.address, expiresAt: 1000 });
+      expect((await (await fetch(`${base}/payers/${payer.address}?viewer=${other.address}&grant=${encodeGrant(expired)}`)).json()).viewGrant.reason).to.equal("grant_expired");
+      const forged = { ...grant, signature: await otherW.signMessage({ message: "stolen" }) };
+      expect((await (await fetch(`${base}/payers/${payer.address}?viewer=${other.address}&grant=${encodeGrant(forged)}`)).json()).viewGrant.valid).to.equal(false);
+      const anotherViewer = await signViewGrant(payerW, { payer: payer.address, viewer: agent.address, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+      expect((await (await fetch(`${base}/payers/${payer.address}?viewer=${other.address}&grant=${encodeGrant(anotherViewer)}`)).json()).viewGrant.reason).to.equal("viewer_mismatch");
+      expect((await fetch(`${base}/payers/nope`)).status).to.equal(400);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("audit pricing is reputation-weighted — curve, quote, and offer agree", async () => {
+    const audit = await import("../gate/src/audit.js");
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    // the pure curve
+    expect(audit.priceForScore(0n, false, 10000n).amount).to.equal(10000n);
+    expect(audit.priceForScore(50_000n, true, 10000n).amount).to.equal(10000n);
+    expect(audit.priceForScore(100_000n, true, 10000n).amount).to.equal(7500n);
+    expect(audit.priceForScore(2_000_000n, true, 10000n).amount).to.equal(5000n);
+    // give the buyer a counted score: 'other' buys from payer and rates — payer's
+    // score is AMOUNT*5 = 500,000,000, deep in the 50% tier
+    await usdg.transfer(other.address, AMOUNT);
+    await usdg.connect(other).approve(facil.address, AMOUNT);
+    const buyHash = (await (await usdg.connect(facil).transferFrom(other.address, payer.address, AMOUNT)).wait()).hash;
+    ctx.detectFromBlock = 0n;
+    ctx.audit = { account: privateKeyToAccount(generatePrivateKey()), settler: null, payTo: agent.address, amount: "10000", name: "test auditor" };
+    await core.handleTally(ctx, { agent: payer.address, txHash: buyHash, rating: 5, signature: await sign(otherW, buyHash, 5, payer.address) });
+    const priced = await audit.auditPrice(ctx, payer.address);
+    expect(priced.amount).to.equal(5000n);
+    expect(priced.tier).to.include("trusted");
+
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const quote = await (await fetch(`${base}/audit/quote?buyer=${payer.address}`)).json();
+      expect(quote.amount).to.equal("5000");
+      expect(quote.discountBps).to.equal(5000);
+      expect(quote.counted).to.equal(true);
+      const offer = await (await fetch(`${base}/audit/report?agent=${agent.address}&buyer=${payer.address}`)).json();
+      expect(offer.accepts[0].amount).to.equal("5000");
+      expect(offer.pricing.tier).to.include("trusted");
+      // an unidentified or unrated buyer still gets the base price
+      const anon = await (await fetch(`${base}/audit/report?agent=${agent.address}`)).json();
+      expect(anon.accepts[0].amount).to.equal("10000");
+      expect((await fetch(`${base}/audit/quote?buyer=nope`)).status).to.equal(400);
+    } finally {
+      server.close();
+      delete ctx.audit;
+    }
+  });
+
   it("HTTP: GET /audit/report is absent without AUDITOR_KEY, 402-gated when configured", async () => {
     // unconfigured gate: no paid surface
     const off = srv.createServer(ctx).listen(0);

@@ -100,7 +100,7 @@ export const api = {
    *  authorization for exactly what it asks, retry with the payment attached. */
   async buyAudit(account, agent) {
     if (!walletClient) throw new Error("Connect a wallet first.");
-    const url = `/audit/report?agent=${agent}`;
+    const url = `/audit/report?agent=${agent}&buyer=${account}`; // the offer prices the buyer's own reputation
     const offer = await (await fetch(url, { headers: { accept: "application/json" } })).json();
     const req = offer?.accepts?.[0];
     if (offer?.x402Version !== 2 || req?.scheme !== "exact")

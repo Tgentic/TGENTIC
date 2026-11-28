@@ -8,6 +8,28 @@ const DEFAULT_GATE = "https://www.tgentic.xyz";
 const b64 = (s) => (typeof btoa === "function" ? btoa(s) : Buffer.from(s, "utf8").toString("base64"));
 const unb64 = (s) => (typeof atob === "function" ? atob(s) : Buffer.from(s, "base64").toString("utf8"));
 
+const GRANT_TYPE = "tgentic/view-grant/1";
+const sortValue = (v) => {
+  if (Array.isArray(v)) return v.map(sortValue);
+  if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortValue(v[k])]));
+  return v;
+};
+/** The exact string a viewing-grant signature commits to — canonical JSON sans signature. */
+const grantMessage = (g) => { const { signature: _s, ...rest } = g; return JSON.stringify(sortValue(rest)); };
+
+/**
+ * Mint a viewing grant: payer delegates read access to their receipt history
+ * to a viewer, until expiresAt (unix seconds). A signature only — it can never
+ * move funds or sign tallies. Signer: anything with signMessage ({ message }).
+ */
+export async function signViewGrant(signer, { payer, viewer, expiresAt }) {
+  const grant = { type: GRANT_TYPE, payer: getAddress(payer.toLowerCase()), viewer: getAddress(viewer.toLowerCase()), scope: "receipts", expiresAt };
+  const signature = await signer.signMessage({ message: grantMessage(grant) });
+  return { ...grant, signature };
+}
+/** A grant travels as base64 JSON in the ?grant= param. */
+export const encodeViewGrant = (g) => b64(JSON.stringify(g));
+
 const authTypes = {
   TransferWithAuthorization: [
     { name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
@@ -40,6 +62,20 @@ export function createGateClient({ gateUrl = DEFAULT_GATE, fetchImpl = fetch } =
     /** Manipulation heuristics — the same detector the dapp renders. */
     risk: (a) => call(`/risk?agent=${addr(a)}`),
 
+    /** The payer side of the ledger — what this address bought and how it
+     *  rated. Pass a signed viewing grant (see signViewGrant) to mark the read
+     *  as delegated to a specific viewer. */
+    payer: (a, { viewer, grant } = {}) => {
+      const qs = new URLSearchParams();
+      if (viewer) qs.set("viewer", addr(viewer));
+      if (grant) qs.set("grant", typeof grant === "string" ? grant : encodeViewGrant(grant));
+      const q = qs.toString();
+      return call(`/payers/${addr(a)}${q ? `?${q}` : ""}`);
+    },
+
+    /** What this buyer would pay for an audit — the public reputation discount. */
+    quote: (buyer) => call(`/audit/quote?buyer=${addr(buyer)}`),
+
     /** The agent's verified identity manifest (Step 6 artifact). */
     manifest: (a) => call(`/manifest/${addr(a)}`),
 
@@ -48,9 +84,10 @@ export function createGateClient({ gateUrl = DEFAULT_GATE, fetchImpl = fetch } =
 
     health: () => call("/health"),
 
-    /** The x402 offer for a paid audit — spec-shaped requirements, no charge yet. */
-    async auditOffer(a) {
-      const res = await fetchImpl(`${base}/audit/report?agent=${addr(a)}`, { headers: { accept: "application/json" } });
+    /** The x402 offer for a paid audit — spec-shaped requirements, no charge
+     *  yet. Pass buyer to get their reputation-discounted price in the offer. */
+    async auditOffer(a, { buyer } = {}) {
+      const res = await fetchImpl(`${base}/audit/report?agent=${addr(a)}${buyer ? `&buyer=${addr(buyer)}` : ""}`, { headers: { accept: "application/json" } });
       const body = await res.json().catch(() => null);
       if (res.status !== 402 || body?.x402Version !== 2)
         throw Object.assign(new Error(body?.message ?? body?.error ?? `gate ${res.status}`), { status: res.status, body });
@@ -66,7 +103,7 @@ export function createGateClient({ gateUrl = DEFAULT_GATE, fetchImpl = fetch } =
      */
     async buyAudit(a, walletClient, account = walletClient.account?.address) {
       if (!account) throw new Error("Pass an account, or a walletClient bound to one.");
-      const req = await api.auditOffer(a);
+      const req = await api.auditOffer(a, { buyer: account }); // the offer prices the buyer's own reputation
       const chainId = Number(req.network.split(":")[1]);
       const now = Math.floor(Date.now() / 1000);
       const nonce = `0x${[...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, "0")).join("")}`;

@@ -6,7 +6,8 @@ import { GateError, handleTally } from "./core.js";
 import { assessAgent, computeFlags, DEFAULT_FROM_BLOCK, LOG_BLOCK_RANGE } from "./heuristics.js";
 import { handleMcp } from "./mcp.js";
 import { manifestHash } from "./manifest.js";
-import { handleAudit } from "./audit.js";
+import { handleAudit, auditPrice, PRICE_TIERS } from "./audit.js";
+import { verifyViewGrant, decodeGrant } from "./grants.js";
 
 const MAX_BODY = 4096;
 
@@ -210,7 +211,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // Costly paths get an application-layer request budget — the chain sequences
     // first-come-first-served, so there is no fee market to lean on. Placed before
     // the handlers it covers: anything that returns earlier is intentionally free.
-    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents" || pathname.startsWith("/agents/") || pathname === "/audit/report"))) {
+    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents" || pathname.startsWith("/agents/") || pathname.startsWith("/payers/") || pathname === "/audit/report" || pathname === "/audit/quote"))) {
       if (!allow(clientIp(req), ratePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 
@@ -258,6 +259,41 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       } catch (e) {
         console.error("agent lookup failed:", e?.shortMessage ?? e?.message ?? e);
         return send(500, { error: "INTERNAL", message: "The agent lookup failed." });
+      }
+    }
+
+    // The payer side of the ledger — what this address bought, from whom, and
+    // how it rated. Public chain data; a valid viewing grant turns the answer
+    // into a delegated read the marketplace can show consent for.
+    if (req.method === "GET" && pathname.startsWith("/payers/")) {
+      const raw = decodeURIComponent(pathname.slice("/payers/".length)).trim();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) return send(400, { error: "BAD_PAYER", message: "Send a 20-byte hex address: /payers/0x…" });
+      const payer = getAddress(raw.toLowerCase());
+      try {
+        const logs = await ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedEvents, args: { payer }, fromBlock: ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, blockRange: LOG_BLOCK_RANGE });
+        const receipts = logs.map((l) => ({
+          agent: getAddress(l.args.agent), amount: l.args.amount.toString(), rating: Number(l.args.rating),
+          txHash: l.args.txHash, blockNumber: l.blockNumber.toString(), tallyTx: l.transactionHash,
+        }));
+        const agents = new Set(receipts.map((r) => r.agent));
+        const totalPaid = receipts.reduce((s, r) => s + BigInt(r.amount), 0n);
+        const body = {
+          payer, receiptsGiven: receipts.length, uniqueAgents: agents.size,
+          totalPaid: totalPaid.toString(),
+          avgRating: receipts.length ? Math.round((receipts.reduce((s, r) => s + r.rating, 0) / receipts.length) * 100) / 100 : null,
+          receipts,
+        };
+        // Optional viewing grant: ?viewer=<addr>&grant=<base64 grant json>.
+        // A verified grant is echoed back — the delegation itself is the artifact.
+        const q = new URL(req.url, "https://x").searchParams;
+        if (q.get("grant") || q.get("viewer")) {
+          const verdict = await verifyViewGrant(decodeGrant(q.get("grant")), { payer, viewer: q.get("viewer") });
+          body.viewGrant = verdict.valid ? { valid: true, viewer: verdict.grant.viewer, expiresAt: verdict.grant.expiresAt } : { valid: false, reason: verdict.reason };
+        }
+        return send(200, body);
+      } catch (e) {
+        console.error("payer lookup failed:", e?.shortMessage ?? e?.message ?? e);
+        return send(500, { error: "INTERNAL", message: "The payer lookup failed." });
       }
     }
 
@@ -324,6 +360,21 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       } catch (e) {
         console.error("risk failed:", e?.shortMessage ?? e?.message ?? e);
         return send(500, { error: "INTERNAL", message: "The risk read failed." });
+      }
+    }
+
+    // Reputation-weighted pricing, public: what would this buyer pay for an
+    // audit? The same curve prices the 402 offer and verifies the signature.
+    if (req.method === "GET" && pathname === "/audit/quote") {
+      if (!ctx.audit) return send(404, { error: "NOT_FOUND" });
+      const buyer = new URL(req.url, "https://x").searchParams.get("buyer") ?? "";
+      if (!/^0x[0-9a-fA-F]{40}$/.test(buyer)) return send(400, { error: "BAD_BUYER", message: "Send ?buyer=0x… — a 20-byte hex address." });
+      try {
+        const price = await auditPrice(ctx, buyer);
+        return send(200, { buyer: getAddress(buyer.toLowerCase()), base: ctx.audit.amount, amount: price.amount.toString(), tier: price.tier, discountBps: price.discountBps, buyerScore: price.score, counted: price.counted, tiers: PRICE_TIERS.map((t) => ({ minScore: t.minScore.toString(), discountBps: t.discountBps, label: t.label })) });
+      } catch (e) {
+        console.error("quote failed:", e?.shortMessage ?? e?.message ?? e);
+        return send(500, { error: "INTERNAL", message: "The quote failed." });
       }
     }
 
