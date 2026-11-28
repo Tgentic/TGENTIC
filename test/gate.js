@@ -322,6 +322,36 @@ describe("gate", function () {
     }
   });
 
+  it("HTTP: GET /audit/report gives browsers the docs page and clients the x402 flow", async () => {
+    const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));
+    fs.writeFileSync(path.join(dist, "audit.html"), "<!doctype html><title>audit</title>paid audit report");
+    delete ctx.audit;
+    const server = srv.createServer(ctx, { webDist: dist }).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const page = await fetch(`${base}/audit/report`, { headers: { accept: "text/html,application/xhtml+xml" } });
+      expect(page.headers.get("content-type")).to.include("text/html");
+      expect(await page.text()).to.include("paid audit report");
+      // carrying a payment header marks a client — the x402 flow still runs
+      const client = await fetch(`${base}/audit/report`, { headers: { accept: "text/html", "payment-signature": "x" } });
+      expect(client.headers.get("content-type")).to.include("application/json");
+    } finally {
+      server.close();
+    }
+    // without webDist the route still answers JSON, not a blank page
+    const bare = srv.createServer(ctx).listen(0);
+    await new Promise((r) => bare.once("listening", r));
+    try {
+      const res = await fetch(`http://127.0.0.1:${bare.address().port}/audit/report`, { headers: { accept: "text/html" } });
+      expect(res.status).to.equal(404);
+      expect((await res.json()).error).to.equal("NOT_FOUND");
+    } finally {
+      bare.close();
+    }
+  });
+
   it("HTTP: GET /mcp gives browsers the docs page and MCP clients the SSE channel", async () => {
     const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
     const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));

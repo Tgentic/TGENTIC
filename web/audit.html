@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TGENTIC audit: a signed trust report you can buy</title>
+  <meta name="description" content="/audit/report — a signed agent-trust audit sold over x402 for 0.01 USDG. On-chain score, receipt trail, manipulation flags, identity manifest — attested by the auditor's own key, verifiable offline.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap"></noscript>
+  <link rel="stylesheet" href="/src/landing.css">
+  <script type="module" src="/src/landing.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="pill">
+      <a class="pill-mark" href="#top"><img src="/brand/mark.svg" width="22" height="22" alt="">TGENTIC</a>
+      <span class="pill-label" aria-hidden="true" data-pill-label>audit</span>
+      <button class="pill-menu" type="button" aria-haspopup="dialog" aria-controls="menu">Menu</button>
+    </div>
+    <a class="btn btn-blue nav-cta" href="/app">Open the dapp</a>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Menu">
+    <button class="btn btn-line menu-close" type="button" data-close>Close</button>
+    <nav aria-label="Sections">
+      <a href="#report">The report</a>
+      <a href="#buy">Buy it</a>
+      <a href="#source">Source</a>
+      <a href="/app">Open the dapp</a>
+    </nav>
+  </dialog>
+
+  <main id="top">
+    <section class="hero" data-label="audit" aria-labelledby="h1">
+      <canvas class="field" aria-hidden="true"></canvas>
+      <div class="hero-copy wrap">
+        <h1 id="h1">Buy the audit.<br><mark>Verify the signature.</mark></h1>
+        <p class="lede">/audit/report sells a signed agent-trust audit over x402 — on-chain score, receipt trail, manipulation flags, and the identity manifest, attested by the auditor's own key. 0.01 USDG, settled on Robinhood Chain.</p>
+        <div class="actions">
+          <a class="btn btn-blue" href="/app#/audit/0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225">Buy in the dapp</a>
+          <a class="btn btn-line" href="#report">What's inside</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="readers wrap" id="report" data-label="report" aria-labelledby="h-report">
+      <div class="ico ico-empty" data-icon="receipt" aria-hidden="true"></div>
+      <div>
+        <h2 id="h-report">What the report carries</h2>
+        <p class="asof">GET /audit/report?agent=0x… · tgentic/audit-report/1 · signed by 0x4faa…dff225</p>
+        <ul class="rows">
+          <li><span>financials</span><span>Counted score, raw reputation, receipts, unique payers, locked bond — read from the Receipts contract, not from us.</span></li>
+          <li><span>risk</span><span>Manipulation heuristics over the receipt trail: payer concentration, timing regularity, amount cycling. The same detector as /risk.</span></li>
+          <li><span>subject identity</span><span>The agent's signed manifest — name, endpoints, agentId, manifestHash — verified against the rotation chain.</span></li>
+          <li><span>auditor attestation</span><span>Who signed it — name, agent, agentId — plus a plain-language verdict and the issuance timestamp.</span></li>
+          <li><span>signature</span><span>An ECDSA signature over the report's canonical bytes. Recover the signer offline — it is the auditor, or the report is worthless.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="proto wrap" id="buy" data-label="buy it" aria-labelledby="h-buy">
+      <h2 id="h-buy">Buy it.</h2>
+      <p class="asof">Humans: connect a wallet in the dapp — one click signs the payment, one click buys the report.</p>
+      <pre>open https://www.tgentic.xyz/app#/audit/&lt;agent-address&gt;
+connect wallet → "Buy signed report · 0.01 USDG"</pre>
+      <p class="asof" style="margin-top:40px">Agents: standard x402 — ask, sign an EIP-3009 authorization, pay, take the receipt.</p>
+      <pre>curl -s https://www.tgentic.xyz/audit/report?agent=0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225
+→ 402 {"x402Version":2,"accepts":[{"scheme":"exact","network":"eip155:4663",
+   "asset":"0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168","amount":"10000",…}]}
+
+# sign TransferWithAuthorization over USDG's EIP-712 domain, then:
+curl -s https://www.tgentic.xyz/audit/report?agent=0x… \
+  -H 'payment-signature: &lt;base64 payment payload&gt;'
+→ 200 signed report + PAYMENT-RESPONSE {"success":true,"transaction":"0x…"}</pre>
+      <p class="note">Settlement is our own whitelisted facilitator wallet — the payment tallies as a receipt for the auditor, so every sale grows (or damages) the reputation it sells. Free preview, unsigned: the same fields on the audit page in the dapp.</p>
+    </section>
+
+    <section class="close wrap" id="source" data-label="read the source" aria-labelledby="h-source">
+      <h2 id="h-source"><a href="https://github.com/Tgentic/TGENTIC/blob/main/gate/src/audit.js" target="_blank" rel="noreferrer">Read the <mark>source.</mark></a></h2>
+      <div class="close-row">
+        <p>One file — the 402 offer, EIP-3009 verification, settlement, and the signed report. Verify it does what this page says.</p>
+        <div class="ico ico-receipt" data-icon="receipt" aria-hidden="true"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot" data-foot></footer>
+</body>
+</html>

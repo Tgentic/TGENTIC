@@ -255,7 +255,8 @@ const summarize = ({ receipts, payers, counted, flagged, flags, man }) => {
   return `Paid-work record: ${parts.join("; ")}.`;
 };
 
-function Audit({ a }) {
+function Audit({ a, acct, onConnect }) {
+  const [buy, setBuy] = useState(null);
   const [st, retry] = useLoad(async () => {
     const [d, tk, logs, man] = await Promise.all([api.readAgent(a), api.readToken(), api.receipts(a), fetchManifest(a)]);
     return { d, tk, logs, man };
@@ -267,6 +268,23 @@ function Audit({ a }) {
   const risk = flagsFor(a, logs);
   const subject = getAddress(a.toLowerCase());
   const isAuditor = subject.toLowerCase() === AUDITOR;
+  const doBuy = async () => {
+    setBuy({ busy: true });
+    try {
+      const { report, settle } = await api.buyAudit(acct, subject);
+      setBuy({ ok: true, tx: settle?.transaction, report });
+    } catch (e) {
+      setBuy({ err: e?.shortMessage ?? e?.message ?? "Purchase failed" });
+    }
+  };
+  const download = () => {
+    const blob = new Blob([JSON.stringify(buy.report, null, 2)], { type: "application/json" });
+    const el = document.createElement("a");
+    el.href = URL.createObjectURL(blob);
+    el.download = `audit-report-${subject}.json`;
+    el.click();
+    URL.revokeObjectURL(el.href);
+  };
   return (
     <article className="profile" aria-label={`Audit report for ${subject}`}>
       <header className="p-head">
@@ -337,6 +355,24 @@ function Audit({ a }) {
                 </tr>
               ))}</tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section className="block" aria-label="Buy the signed report">
+        <h2>Signed report</h2>
+        <p className="hint">This page is the free preview. The signed artifact — the same fields, attested by the auditor key and verifiable offline — costs 0.01 USDG over x402. The payment itself tallies as a receipt for the auditor.</p>
+        {!buy?.ok && (
+          acct
+            ? <button className="btn btn-blue" disabled={buy?.busy} onClick={doBuy}>{buy?.busy ? "Signing & paying…" : "Buy signed report · 0.01 USDG"}</button>
+            : <button className="btn btn-blue" onClick={onConnect}>Connect wallet to buy · 0.01 USDG</button>
+        )}
+        {buy?.err && <p className="warn-text">{buy.err} <button className="btn btn-line" onClick={doBuy}>Retry</button></p>}
+        {buy?.ok && (
+          <div className="audit-meta">
+            <p className="ok-text">Payment settled — report signed by the auditor.</p>
+            <p className="hint mono">settle tx: {buy.tx ? <TxLink hash={buy.tx} /> : "—"} · signature {short(buy.report.signature)}</p>
+            <button className="btn btn-line" onClick={download}>Download signed report (JSON)</button>
           </div>
         )}
       </section>
@@ -664,7 +700,7 @@ export default function App() {
         <p className="demo-bar" role="note">Demo data. Sample agents and receipts so you can see the dapp working; none of it is on chain. <a href={location.pathname + location.hash}>Leave demo</a></p>
       )}
       <main className={SHOW_DEMO_LABEL ? "has-demo" : ""}>
-        {name === "board" || name === "directory" ? <Board /> : name === "agents" ? <Agents /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : name === "audit" ? (isAddress(param ?? "") ? <div className="page"><Audit a={param} /></div> : <Lookup />) : <Lookup param={param} />}
+        {name === "board" || name === "directory" ? <Board /> : name === "agents" ? <Agents /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : name === "audit" ? (isAddress(param ?? "") ? <div className="page"><Audit a={param} acct={acct} onConnect={connect} /></div> : <Lookup />) : <Lookup param={param} />}
       </main>
       <footer className="foot" dangerouslySetInnerHTML={FOOT} />
     </>

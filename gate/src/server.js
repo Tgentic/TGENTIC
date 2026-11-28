@@ -230,6 +230,11 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // auditor key. Only mounted when AUDITOR_KEY is configured; without it the
     // route is absent (no half-working paid surface).
     if (req.method === "GET" && pathname === "/audit/report") {
+      // Browsers get the endpoint's docs page — the JSON error meant for
+      // clients reads as a broken page to humans. A payment header overrides:
+      // whoever carries one is a client, not a reader.
+      const browser = req.headers.accept?.includes("text/html") && !req.headers["payment-signature"] && !req.headers["x-payment"];
+      if (browser && webDist) return serveStatic(webDist, "/audit", res);
       if (!ctx.audit) return send(404, { error: "NOT_FOUND" });
       try {
         const out = await handleAudit(ctx, req);

@@ -96,4 +96,48 @@ export const api = {
     await pub.waitForTransactionReceipt({ hash });
     return hash;
   },
+  /** Buy the signed audit report over x402: read the 402 offer, sign an EIP-3009
+   *  authorization for exactly what it asks, retry with the payment attached. */
+  async buyAudit(account, agent) {
+    if (!walletClient) throw new Error("Connect a wallet first.");
+    const url = `/audit/report?agent=${agent}`;
+    const offer = await (await fetch(url, { headers: { accept: "application/json" } })).json();
+    const req = offer?.accepts?.[0];
+    if (offer?.x402Version !== 2 || req?.scheme !== "exact")
+      throw new Error(offer?.error === "Payment required" ? "The endpoint did not return a payment offer." : `Endpoint error: ${offer?.error ?? "unknown"}`);
+    const now = Math.floor(Date.now() / 1000);
+    const nonceBytes = crypto.getRandomValues(new Uint8Array(32));
+    const nonce = `0x${[...nonceBytes].map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+    const message = {
+      from: account, to: req.payTo, value: BigInt(req.amount),
+      validAfter: BigInt(now - 60), validBefore: BigInt(now + Math.min(req.maxTimeoutSeconds ?? 300, 300)), nonce,
+    };
+    const signature = await walletClient.signTypedData({
+      account,
+      domain: { name: req.extra?.name ?? "Global Dollar", version: req.extra?.version ?? "1", chainId: chain.id, verifyingContract: req.asset },
+      types: { TransferWithAuthorization: [
+        { name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }] },
+      primaryType: "TransferWithAuthorization",
+      message,
+    });
+    const paymentPayload = {
+      x402Version: 2,
+      accepted: req,
+      payload: {
+        signature,
+        authorization: {
+          from: account, to: req.payTo, value: req.amount,
+          validAfter: message.validAfter.toString(), validBefore: message.validBefore.toString(), nonce,
+        },
+      },
+    };
+    const res = await fetch(url, { headers: { accept: "application/json", "payment-signature": btoa(JSON.stringify(paymentPayload)) } });
+    const body = await res.json().catch(() => ({}));
+    const payRes = res.headers.get("payment-response");
+    const settle = payRes ? JSON.parse(atob(payRes)) : null;
+    if (res.status === 402) throw new Error(`Payment rejected: ${body?.error ?? "unknown"}`);
+    if (!res.ok) throw new Error(`Endpoint error ${res.status}: ${body?.error ?? res.statusText}`);
+    return { report: body, settle };
+  },
 };
