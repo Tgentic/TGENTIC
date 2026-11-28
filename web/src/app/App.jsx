@@ -165,7 +165,7 @@ function Profile({ a }) {
             {erc8004Of(a).feedbackTxs.map((h) => (
               <li key={h}><span className="mono mute">feedback · proofOfPayment</span> <a className="mono" href={`${EXPLORER}/tx/${h}`} target="_blank" rel="noreferrer">{short(h)}</a></li>
             ))}
-            <li><span className="mono mute">manifest · EIP-191 signed</span> <a className="mono" href={`https://github.com/Tgentic/TGENTIC/blob/main/manifests/${a}.json`} target="_blank" rel="noreferrer">verify ↗</a></li>
+            <li><span className="mono mute">manifest · EIP-191 signed</span> <a className="mono" href={`https://github.com/Tgentic/TGENTIC/blob/main/manifests/${a.toLowerCase()}.json`} target="_blank" rel="noreferrer">verify ↗</a></li>
           </ul>
         </section>
       ) : (
