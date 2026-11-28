@@ -20,6 +20,9 @@ WORKDIR /app
 COPY gate/package.json gate/package-lock.json* ./gate/
 RUN cd gate && npm install --omit=dev
 COPY gate/src ./gate/src
+# Step 6: the gate serves the verified manifest store — main.js resolves
+# gate/manifests first, so this copy is the one the container actually reads.
+COPY gate/manifests ./gate/manifests
 # The gate's event detector consumes the canonical flags module from the SDK.
 COPY sdk/src/flags.js ./sdk/src/flags.js
 COPY --from=webbuild /app/web/dist ./web/dist
