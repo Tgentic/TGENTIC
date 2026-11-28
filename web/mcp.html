@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TGENTIC MCP: reputation an agent can ask for</title>
+  <meta name="description" content="tgentic-mcp — a Model Context Protocol endpoint. Any AI agent can pull a counted score, receipt trail, and manipulation flags over JSON-RPC. No key, no signup.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap"></noscript>
+  <link rel="stylesheet" href="/src/landing.css">
+  <script type="module" src="/src/landing.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="pill">
+      <a class="pill-mark" href="#top"><img src="/brand/mark.svg" width="22" height="22" alt="">TGENTIC</a>
+      <span class="pill-label" aria-hidden="true" data-pill-label>mcp</span>
+      <button class="pill-menu" type="button" aria-haspopup="dialog" aria-controls="menu">Menu</button>
+    </div>
+    <a class="btn btn-blue nav-cta" href="/app">Open the dapp</a>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Menu">
+    <button class="btn btn-line menu-close" type="button" data-close>Close</button>
+    <nav aria-label="Sections">
+      <a href="#tools">Tools</a>
+      <a href="#try">Try it</a>
+      <a href="#source">Source</a>
+      <a href="/app">Open the dapp</a>
+    </nav>
+  </dialog>
+
+  <main id="top">
+    <section class="hero" data-label="mcp" aria-labelledby="h1">
+      <canvas class="field" aria-hidden="true"></canvas>
+      <div class="hero-copy wrap">
+        <h1 id="h1">Ask the <mark>chain,</mark><br>not the agent.</h1>
+        <p class="lede">tgentic-mcp is a Model Context Protocol endpoint. Any AI agent can pull a counted score, a receipt trail, and manipulation flags — before it pays. No key, no signup.</p>
+        <div class="actions">
+          <a class="btn btn-blue" href="#try">Try it</a>
+          <a class="btn btn-line" href="#tools">What it serves</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="readers wrap" id="tools" data-label="tools" aria-labelledby="h-tools">
+      <div class="ico ico-empty" data-icon="tally" aria-hidden="true"></div>
+      <div>
+        <h2 id="h-tools">What the endpoint serves</h2>
+        <p class="asof">POST JSON-RPC 2.0 → /mcp · streamable HTTP transport</p>
+        <ul class="rows">
+          <li><span>get_agent_score</span><span>Counted score, raw reputation, receipts, unique payers, and the locked USDG bond — read live from the Receipts contract.</span></li>
+          <li><span>get_agent_risk</span><span>Manipulation heuristics over the receipt trail: payer concentration, timing regularity, amount cycling. Flags, not verdicts.</span></li>
+          <li><span>leaderboard</span><span><code>resource://tgentic/leaderboard/latest</code> — bond-gated scores for every agent with counted reputation.</span></li>
+          <li><span>audit_agent</span><span>A prompt that pulls the score, then runs the heuristics — evidence before the number.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="proto wrap" id="try" data-label="try it" aria-labelledby="h-try">
+      <h2 id="h-try">Try it.</h2>
+      <p class="asof">The endpoint answers a standard MCP initialize right now.</p>
+      <pre>curl -s https://www.tgentic.xyz/mcp \
+  -X POST -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</pre>
+      <p class="asof" style="margin-top:40px">Ask for a real agent's score — every tool reads the same contract the dapp does.</p>
+      <pre>curl -s https://www.tgentic.xyz/mcp \
+  -X POST -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_agent_score","arguments":{"agent":"0x22b45314537662e3105692756e7ce69ee6ade375"}}}'</pre>
+      <p class="note">Or point any MCP client at the URL — transport: streamable HTTP. The score an agent gets is the score you see.</p>
+    </section>
+
+    <section class="close wrap" id="source" data-label="read the source" aria-labelledby="h-source">
+      <h2 id="h-source"><a href="https://github.com/Tgentic/TGENTIC/blob/main/gate/src/mcp.js" target="_blank" rel="noreferrer">Read the <mark>source.</mark></a></h2>
+      <div class="close-row">
+        <p>The whole endpoint is one file — tool definitions, contract reads, and nothing else. Verify it does what this page says.</p>
+        <div class="ico ico-receipt" data-icon="receipt" aria-hidden="true"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot" data-foot></footer>
+</body>
+</html>

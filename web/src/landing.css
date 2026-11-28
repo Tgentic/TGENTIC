@@ -104,6 +104,11 @@
 .rows li { display: grid; grid-template-columns: minmax(0, 15ch) minmax(0, 1fr); gap: 16px 40px; padding: 20px 0; border-bottom: 1px solid var(--hair); font-size: 1.3rem; line-height: 1.3; }
 .rows li span:last-child { font-size: 1.05rem; line-height: 1.6; color: var(--mute); }
 
+/* ---------- mcp page: endpoint docs ---------- */
+.proto { padding-block: clamp(80px, 12vh, 140px); border-top: 1px solid var(--hair); }
+.proto h2 { font-size: clamp(2.4rem, 4.6vw, 4rem); }
+.proto pre { margin: 28px 0 0; padding: 22px 24px; border: 1px solid var(--hair); background: var(--panel); font: 400 .85rem/1.75 var(--mono); color: var(--text); overflow-x: auto; }
+
 /* ---------- giant closing ---------- */
 .close { padding-block: clamp(96px, 16vh, 200px) clamp(64px, 10vh, 120px); border-top: 1px solid var(--hair); }
 .close h2 { font-size: clamp(3rem, 9vw, 8.4rem); font-variation-settings: "opsz" 72; }

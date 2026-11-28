@@ -4,7 +4,7 @@ import path from "node:path";
 import { getAddress } from "viem";
 import { GateError, handleTally } from "./core.js";
 import { assessAgent } from "./heuristics.js";
-import { handleMcp, mcpInfo } from "./mcp.js";
+import { handleMcp } from "./mcp.js";
 
 const MAX_BODY = 4096;
 
@@ -15,24 +15,6 @@ const SECURITY_HEADERS = {
   "permissions-policy": "camera=(), microphone=(), geolocation=()",
   "content-security-policy": "frame-ancestors 'none'",
 };
-
-// What a human sees opening GET /mcp in a browser — the endpoint itself is
-// POST JSON-RPC; MCP clients get the SSE channel below instead of this page.
-const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-const mcpInfoPage = () => `<!doctype html>
-<title>tgentic-mcp</title>
-<style>body{font-family:ui-monospace,Menlo,monospace;max-width:680px;margin:48px auto;padding:0 16px;line-height:1.55;color:#111}pre{background:#f4f4f4;padding:12px;overflow:auto;font-size:12px}h2{font-size:14px;margin:20px 0 4px}a{color:inherit}</style>
-<h1>tgentic-mcp</h1>
-<p>Model Context Protocol endpoint — <b>POST</b> JSON-RPC 2.0 to this URL.
-This page exists for humans; MCP clients negotiate the stream themselves.</p>
-<h2>tools</h2><ul>${mcpInfo.tools.map((t) => `<li><b>${esc(t.name)}</b> — ${esc(t.description)}</li>`).join("")}</ul>
-<h2>resources</h2><ul>${mcpInfo.resources.map((r) => `<li><b>${esc(r.name)}</b> — <code>${esc(r.uri)}</code>: ${esc(r.description)}</li>`).join("")}</ul>
-<h2>prompts</h2><ul>${mcpInfo.prompts.map((p) => `<li><b>${esc(p.name)}</b> — ${esc(p.description)}</li>`).join("")}</ul>
-<h2>try it</h2>
-<pre>curl -s https://www.tgentic.xyz/mcp \\
-  -X POST -H 'content-type: application/json' \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</pre>
-<p>code: <a href="https://github.com/Tgentic/TGENTIC/blob/main/gate/src/mcp.js">gate/src/mcp.js</a></p>`;
 
 /** Static file server for web/dist (the dapp) — /health and POST /tally stay APIs.
  *  Clean URLs: /app serves app.html; /app.html is 301-redirected to /app. */
@@ -111,12 +93,11 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // like a normal request and treat a stream that never ends as a hang,
     // while real MCP clients simply reconnect per the SSE spec.
     if (req.method === "GET" && pathname === "/mcp") {
-      // Browsers never send Accept: text/event-stream — give humans the info
-      // page instead of a stream that renders as a near-blank screen.
+      // Browsers never send Accept: text/event-stream — serve the docs page
+      // from web/dist instead of a stream that renders as a near-blank screen.
       if (!req.headers.accept?.includes("text/event-stream")) {
-        res.writeHead(200, { ...SECURITY_HEADERS, "content-type": "text/html; charset=utf-8", "access-control-allow-origin": "*" });
-        res.end(mcpInfoPage());
-        return;
+        if (webDist) return serveStatic(webDist, "/mcp", res);
+        return send(200, { name: "tgentic-mcp", hint: "POST JSON-RPC 2.0 to this URL" });
       }
       res.writeHead(200, {
         ...SECURITY_HEADERS,

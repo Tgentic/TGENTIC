@@ -155,8 +155,11 @@ describe("gate", function () {
     }
   });
 
-  it("HTTP: GET /mcp gives browsers an info page and MCP clients the SSE channel", async () => {
-    const server = srv.createServer(ctx).listen(0);
+  it("HTTP: GET /mcp gives browsers the docs page and MCP clients the SSE channel", async () => {
+    const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));
+    fs.writeFileSync(path.join(dist, "mcp.html"), "<!doctype html><title>mcp</title>get_agent_score get_agent_risk");
+    const server = srv.createServer(ctx, { webDist: dist }).listen(0);
     await new Promise((r) => server.once("listening", r));
     const base = `http://127.0.0.1:${server.address().port}`;
     try {
@@ -172,6 +175,16 @@ describe("gate", function () {
       expect(await sse.text()).to.include("tgentic-mcp");
     } finally {
       server.close();
+    }
+    // without webDist (gate-only deploy) browsers still get a useful answer
+    const bare = srv.createServer(ctx).listen(0);
+    await new Promise((r) => bare.once("listening", r));
+    try {
+      const res = await fetch(`http://127.0.0.1:${bare.address().port}/mcp`, { headers: { accept: "text/html" } });
+      expect(res.status).to.equal(200);
+      expect((await res.json()).name).to.equal("tgentic-mcp");
+    } finally {
+      bare.close();
     }
   });
 

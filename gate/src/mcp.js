@@ -146,10 +146,6 @@ async function handleMessage(ctx, m) {
  * POST /mcp handler. Accepts a single JSON-RPC message or an array (batch).
  * @returns {{status:number, body?:object}}
  */
-// Shown to humans opening GET /mcp in a browser — built from the same
-// declarations the protocol serves, so the page can never drift from reality.
-export const mcpInfo = { tools: TOOLS, resources: RESOURCES, prompts: PROMPTS };
-
 export async function handleMcp(ctx, parsedBody) {
   if (Array.isArray(parsedBody)) {
     if (parsedBody.length === 0) return { status: 400, body: error(null, -32600, "empty batch") };
