@@ -91,7 +91,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // identity lookup, same store the MCP get_agent_identity tool reads.
     if (req.method === "GET" && pathname.startsWith("/manifest/")) {
       const addr = pathname.slice("/manifest/".length).replace(/\.json$/i, "").toLowerCase();
-      const m = /^0x[0-9a-f]{40}$/.test(addr) ? ctx.manifests?.byAgent.get(addr) : null;
+      const m = /^0x[0-9a-f]{40}$/.test(addr) ? ctx.manifests?.byAgent?.get(addr) : null;
       return m ? send(200, m) : send(404, { error: "NO_MANIFEST", message: "No verified manifest for this agent." });
     }
 

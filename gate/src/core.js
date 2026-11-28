@@ -91,7 +91,7 @@ export async function handleTally(ctx, body) {
       if (!v.ok) throw new GateError("MANIFEST_INVALID", `The manifest does not verify: ${v.errors[0] ?? "invalid"}.`, 400);
       if (manifest.agent.toLowerCase() !== agent.toLowerCase())
         throw new GateError("MANIFEST_MISMATCH", "The manifest's agent is not the agent being tallied.", 400);
-      const current = ctx.manifests?.byAgent.get(agent.toLowerCase());
+      const current = ctx.manifests?.byAgent?.get(agent.toLowerCase());
       boundHash = manifestHash(manifest);
       if (current && manifestHash(current) !== boundHash)
         throw new GateError("MANIFEST_STALE", "The manifest was superseded — bind the current version instead.", 409);

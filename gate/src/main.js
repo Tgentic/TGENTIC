@@ -69,7 +69,7 @@ const ctx = {
   // Step 6: verified manifests loaded once from MANIFESTS_DIR (repo manifests/
   // by default). resolveManifests() drops everything after a gap or an
   // unauthorized signer, so what lands here is the trusted tip only.
-  manifests: loadManifestStore(env.MANIFESTS_DIR ?? new URL("../../manifests/", import.meta.url).pathname),
+  manifests: await loadManifestStore(env.MANIFESTS_DIR ?? new URL("../../manifests/", import.meta.url).pathname),
 };
 
 const port = Number(env.PORT ?? 8788); // 8787 left reserved

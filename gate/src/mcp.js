@@ -89,7 +89,7 @@ async function callTool(ctx, name, args = {}) {
     const [score, bond, receipts, payers, reputation] = await Promise.all(
       ["score", "bond", "receipts", "payers", "reputation"].map(read),
     );
-    const m = ctx.manifests?.byAgent.get(agent.toLowerCase()) ?? null;
+    const m = ctx.manifests?.byAgent?.get(agent.toLowerCase()) ?? null;
     return {
       agent,
       agentId: m?.agentId ?? (Number.isInteger(args.agentId) ? args.agentId : null),
