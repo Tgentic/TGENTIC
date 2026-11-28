@@ -204,7 +204,7 @@ function Profile({ a }) {
           <div className="scroll">
             <table>
               <thead><tr><th>Block</th><th>Payer</th><th>Amount</th><th>Rating</th><th>Payment tx</th></tr></thead>
-              <tbody>{logs.map((l, i) => (
+              <tbody>{logs.slice(0, 50).map((l, i) => (
                 <tr key={l.transactionHash + l.logIndex} style={{ "--i": Math.min(i, 20) }}>
                   <td className="mono">{String(l.blockNumber)}</td>
                   <td><span className="cell-id"><Identicon address={l.args.payer} size={20} />{short(l.args.payer)}</span></td>
@@ -214,6 +214,7 @@ function Profile({ a }) {
                 </tr>
               ))}</tbody>
             </table>
+            {logs.length > 50 && <p className="hint">Showing the latest 50 of {logs.length} verified receipts. Signals above cover all {logs.length}.</p>}
           </div>
         )}
       </section>
@@ -222,7 +223,19 @@ function Profile({ a }) {
 }
 
 function Lookup({ param }) {
-  if (param) return <div className="page"><Profile a={param} /></div>;
+  if (param) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(param)) {
+      return (
+        <div className="page">
+          <div className="state err" role="alert">
+            <p>That is not a valid address: <code className="mono">{param}</code></p>
+            <a className="btn btn-line" href="#/lookup">New search</a>
+          </div>
+        </div>
+      );
+    }
+    return <div className="page"><Profile a={getAddress(param.toLowerCase())} /></div>;
+  }
   return (
     <>
       <Band>

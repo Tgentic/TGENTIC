@@ -32,8 +32,11 @@ chain-local by construction.
 ### L1 — Gate-side chain check (recommended first step, ~5 lines)
 
 In `verifyPayment`, after `getTransaction`, assert
-`tx.chainId === BigInt(ctx.chainId)` (type-2/EIP-1559 txs always carry
-it; legacy unprotected txs have `chainId: null` → reject). This makes
+`tx.chainId === ctx.chainId` (note: `viem`'s `getTransaction` returns
+`tx.chainId` as a JS `number`, not a `bigint`, so comparing against
+`BigInt(ctx.chainId)` with `===` would always fail; type-2/EIP-1559 and
+EIP-155 txs carry a numeric `chainId`, while legacy unprotected txs have
+`chainId: undefined` → reject). This makes
 the *same raw transaction* unusable on a second chain: its hash may
 collide, but the gate refuses it because the tx itself declares another
 chain. Cost: one field comparison. Covers the realistic replay vector.

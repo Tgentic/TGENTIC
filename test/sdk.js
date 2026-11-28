@@ -54,14 +54,21 @@ describe("sdk (Step 4: integration)", function () {
   });
 
   it("recent() and top() drive a leaderboard without local bookkeeping", async () => {
-    await tally(agent, payer, "x");
-    await tally(other, payer, "y", 500000n, 5);
+    await tally(agent, payer, "x", 1000000n, 2); // score 2,000,000 (earlier)
+    await tally(other, payer, "y", 5000000n, 5); // score 25,000,000 (later, higher)
     const feed = await tg.recent(1);
     expect(feed[0].agent).to.equal(other.address);
+    expect(await tg.recent(0)).to.deep.equal([]);
+    expect(await tg.recent(Number.NaN)).to.deep.equal([]);
     const rows = await tg.top();
     expect(rows).to.have.lengthOf(2);
-    const mine = rows.find((r) => r.agent === agent.address);
-    expect(mine.score).to.equal(4000000n);
+    expect(rows[0].agent).to.equal(other.address);
+    expect(rows[1].agent).to.equal(agent.address);
+    expect(rows[1].score).to.equal(2000000n);
+    // top(1) must return the highest-scoring agent, not merely the chronologically earliest one.
+    const top1 = await tg.top(1);
+    expect(top1).to.have.lengthOf(1);
+    expect(top1[0].agent).to.equal(other.address);
   });
 
   it("verify() is the hiring-flow answer: score + signals together", async () => {

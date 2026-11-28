@@ -16,8 +16,21 @@ export const policyAbi = parseAbi([
   "function submitTally(address agent, address payer, bytes32 txHash, uint256 amount, uint8 rating, bytes[] sigs)",
   "function isVerifier(address) view returns (bool)",
   "function receipts() view returns (address)",
+  "function threshold() view returns (uint256)",
 ]);
 const transferAbi = parseAbi(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
+
+// Serialize on-chain relayer submissions per wallet client so concurrent valid
+// /tally requests for distinct txHashes (even across spread copies of ctx) do
+// not race on the same EOA nonce.
+const writeQueues = new WeakMap();
+function serializeWrite(ctx, fn) {
+  const key = ctx.walletClient ?? ctx;
+  const prev = writeQueues.get(key) ?? Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  writeQueues.set(key, next);
+  return next;
+}
 
 export class GateError extends Error {
   constructor(code, message, status) { super(message); this.code = code; this.status = status; }
@@ -88,21 +101,27 @@ export async function handleTally(ctx, body) {
     // layer only accepts the policy — the gate collects m-of-n verifier signatures
     // over the chain-computed digest and submits; the gate key carries no authority
     // of its own here, it just pays gas as the relayer.
-    let hash;
+    let pairs;
     if (ctx.policy) {
       const digest = await ctx.publicClient.readContract({ address: ctx.policy, abi: policyAbi, functionName: "tallyDigest", args: [getAddress(agent), payer, txHash, amount, rating] });
       // Policy._check requires the signatures sorted ascending by recovered signer.
-      const pairs = await Promise.all(ctx.signers.map(async (acc) => ({ sig: await acc.signMessage({ message: { raw: digest } }), addr: acc.address })));
-      pairs.sort((a, b) => (BigInt(a.addr) < BigInt(b.addr) ? -1 : 1));
-      hash = await ctx.walletClient.writeContract({
-        address: ctx.policy, abi: policyAbi, functionName: "submitTally",
-        args: [getAddress(agent), payer, txHash, amount, rating, pairs.map((p) => p.sig)],
-      });
-    } else {
-      hash = await ctx.walletClient.writeContract({ address: ctx.tgentic, abi: tgenticAbi, functionName: "tally", args: [getAddress(agent), payer, txHash, amount, rating] });
+      pairs = await Promise.all(ctx.signers.map(async (acc) => ({ sig: await acc.signMessage({ message: { raw: digest } }), addr: acc.address })));
+      pairs.sort((a, b) => (BigInt(a.addr) < BigInt(b.addr) ? -1 : BigInt(a.addr) > BigInt(b.addr) ? 1 : 0));
     }
-    const done = await ctx.publicClient.waitForTransactionReceipt({ hash });
-    if (done.status !== "success") throw new GateError("TALLY_FAILED", "The tally transaction reverted.", 502);
+    const hash = await serializeWrite(ctx, async () => {
+      const tx = ctx.policy
+        ? await ctx.walletClient.writeContract({
+            address: ctx.policy, abi: policyAbi, functionName: "submitTally",
+            args: [getAddress(agent), payer, txHash, amount, rating, pairs.map((p) => p.sig)],
+          })
+        : await ctx.walletClient.writeContract({
+            address: ctx.tgentic, abi: tgenticAbi, functionName: "tally",
+            args: [getAddress(agent), payer, txHash, amount, rating],
+          });
+      const done = await ctx.publicClient.waitForTransactionReceipt({ hash: tx, timeout: ctx.receiptTimeoutMs ?? 60_000 });
+      if (done.status !== "success") throw new GateError("TALLY_FAILED", "The tally transaction reverted.", 502);
+      return tx;
+    });
     return { tallyTx: hash, agent: getAddress(agent), payer, amount: amount.toString(), rating };
   } finally {
     ctx.inflight.delete(key);

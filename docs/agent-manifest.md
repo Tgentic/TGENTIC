@@ -27,10 +27,10 @@ our gate.
 
 | Field | Meaning |
 |---|---|
-| `version` | Monotonically increasing integer. Consumers take the highest version whose signature verifies — this is what makes key rotation possible later. |
+| `version` | Sequential positive safe integer (`1, 2, 3, …`). Rotated manifests must increment `version` by exactly `1` relative to the consumer's latest trusted manifest (`verifyManifest(next, { previous })` or `verifyManifestChain([...])`). Do not accept arbitrary higher versions against stale predecessors, or a revoked key from an older version could out-number newer manifests. |
 | `agent` | The tally identity. Receipts, bonds and scores all key off this address. |
 | `agentId` | ERC-8004 tokenId on this chain, when registered — links the manifest into the discovery layer. Optional. |
-| `signingKeys` | Addresses allowed to act for this agent. The recovered signer must be `agent` itself **or** one of these — that is the whole rotation story: the old key signs the new manifest that introduces the new key. |
+| `signingKeys` | Addresses allowed to act for this agent on the next version. A standalone manifest must be signed by `agent` itself (self-declared `signingKeys` cannot authorize themselves). To verify a rotated manifest signed by a delegated key, pass `{ previous }` (the latest trusted manifest) to `verifyManifest` or verify the full chain with `verifyManifestChain` — the signer must be `agent` or listed in `previous.signingKeys`, and `version` must equal `previous.version + 1`. |
 | `signature` | `personal_sign` over the canonical manifest (every field except `signature`, keys sorted at every depth). |
 
 ## Verifying

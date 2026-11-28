@@ -48,4 +48,4 @@ def decode_address(hexdata: str, index: int = 0) -> str:
 def pad_address(addr: str) -> str:
     """Address -> 32-byte log topic."""
     a = addr[2:] if addr.startswith("0x") else addr
-    return "0x" + a.rjust(64, "0")
+    return "0x" + a.lower().rjust(64, "0")

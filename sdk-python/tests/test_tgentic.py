@@ -38,6 +38,7 @@ class Abi(unittest.TestCase):
 
     def test_pad_address(self):
         self.assertEqual(pad_address(AGENT), "0x" + "0" * 24 + AGENT[2:])
+        self.assertEqual(pad_address(AGENT.upper().replace("0X", "0x")), "0x" + "0" * 24 + AGENT[2:])
 
 
 def _log(block, payer, amount=200000, rating=5,
@@ -78,6 +79,23 @@ class Flags(unittest.TestCase):
         logs = [_log(100 + 50 * i, "0x" + f"{i+1:040x}", amount=1000 + i,
                      tx=f"0x{i:064x}") for i in range(4)]
         self.assertIn("regular-timing", compute_flags(logs)["flags"])
+
+    def test_dedupe_without_tx_hash_is_order_independent(self):
+        # F1 parity with sdk/src/flags.js: missing tx_hash uses content-derived key
+        p = "0x" + "1" * 40
+        a = {"block_number": 10, "payer": p, "amount": 500}
+        b = {"block_number": 20, "payer": p, "amount": 500}
+        r1 = compute_flags([a, a, b])
+        r2 = compute_flags([b, a, a])
+        self.assertEqual(r1["receipts"], 2)
+        self.assertEqual(r2["receipts"], 2)
+        self.assertEqual(r1["flags"], r2["flags"])
+
+    def test_rounding_matches_js_half_up(self):
+        # 1 / 32 * 10000 = 312.5 -> JS Math.round gives 313 (not banker's 312)
+        logs = [_log(100 + i, f"0x{i + 1:040x}", amount=100 + i, tx=f"0x{i + 1:064x}")
+                for i in range(32)]
+        self.assertEqual(compute_flags(logs)["top_payer_share_bps"], 313)
 
     def test_amount_cycling(self):
         logs = [_log(i * 100, "0x" + f"{i+1:040x}", amount=5000,
@@ -147,6 +165,94 @@ class Client(unittest.TestCase):
         rec = self._tg().recent(5)
         self.assertEqual(len(rec), 1)
         self.assertEqual(rec[0]["agent"], AGENT)
+        self.assertEqual(self._tg().recent(0), [])
+        self.assertEqual(self._tg().recent(None), [])
+
+    def test_non_range_rpc_error_does_not_halve_repeatedly(self):
+        calls = 0
+
+        def transport(method, params):
+            nonlocal calls
+            if method == "eth_blockNumber":
+                return hex(self.LOG_BLOCK)
+            if method == "eth_getLogs":
+                calls += 1
+                raise RuntimeError("RPC error: 429 rate limited")
+            raise AssertionError(method)
+
+        with self.assertRaises(RuntimeError):
+            create_client(transport=transport).receipts(AGENT)
+        self.assertEqual(calls, 1)
+
+    def test_range_error_containing_hex_429_still_halves(self):
+        calls = 0
+
+        def transport(method, params):
+            nonlocal calls
+            if method == "eth_blockNumber":
+                return hex(self.LOG_BLOCK + 10)
+            if method == "eth_getLogs":
+                calls += 1
+                lo, hi = int(params[0]["fromBlock"], 16), int(params[0]["toBlock"], 16)
+                if hi - lo > 5:
+                    raise RuntimeError("RPC error: block range 0x4291..0x429f exceeds max range")
+                return []
+            raise AssertionError(method)
+
+        self.assertEqual(create_client(transport=transport, deploy_block=self.LOG_BLOCK).receipts(AGENT), [])
+        self.assertGreater(calls, 1)
+
+    def test_top_ranks_by_score_before_truncating(self):
+        a1 = "0x" + "1" * 40
+        a2 = "0x" + "2" * 40
+        scores = {a1: 100, a2: 9999}
+
+        def transport(method, params):
+            if method == "eth_blockNumber":
+                return hex(self.LOG_BLOCK + 10)
+            if method == "eth_getLogs":
+                return [
+                    {
+                        "address": params[0]["address"],
+                        "topics": [
+                            "0x9daa2ff566b975dcfccd8073c33e394c4596081ec4ea918cb29f390268ab2a9e",
+                            "0x" + "0" * 24 + a1[2:],
+                            "0x" + "0" * 24 + "0416478379d1bce57d1ef75d1e6a81ff3018f5b1",
+                            "0x" + "11" * 32,
+                        ],
+                        "data": "0x" + f"{100:064x}" + f"{1:064x}",
+                        "blockNumber": hex(self.LOG_BLOCK),
+                        "transactionHash": "0x" + "aa" * 32,
+                    },
+                    {
+                        "address": params[0]["address"],
+                        "topics": [
+                            "0x9daa2ff566b975dcfccd8073c33e394c4596081ec4ea918cb29f390268ab2a9e",
+                            "0x" + "0" * 24 + a2[2:],
+                            "0x" + "0" * 24 + "0416478379d1bce57d1ef75d1e6a81ff3018f5b1",
+                            "0x" + "22" * 32,
+                        ],
+                        "data": "0x" + f"{9999:064x}" + f"{1:064x}",
+                        "blockNumber": hex(self.LOG_BLOCK + 1),
+                        "transactionHash": "0x" + "bb" * 32,
+                    },
+                ]
+            if method == "eth_call":
+                sel = params[0]["data"][2:10]
+                if sel == "831518b7":
+                    return hex(500000)
+                addr = "0x" + params[0]["data"][-40:]
+                if sel == "247ce85b":  # bond
+                    return hex(500000)
+                if sel in ("776f3843", "b9f79451"):  # score, reputation
+                    return hex(scores[addr])
+                return hex(1)
+            raise AssertionError(method)
+
+        rows = create_client(transport=transport).top(limit=1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["agent"], a2)
+        self.assertEqual(rows[0]["score"], 9999)
 
     def test_bad_address(self):
         with self.assertRaises(ValueError):

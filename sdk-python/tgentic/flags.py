@@ -10,7 +10,12 @@ def compute_flags(logs, agent=None):
     Returns a dict of signals and the flags list."""
     seen = {}
     for l in logs:
-        key = str(l.get("tx_hash") or "").lower() or f"log-{len(seen)}"
+        tx_hash = l.get("tx_hash")
+        key = (
+            str(tx_hash).lower()
+            if tx_hash
+            else f"log-{l['block_number']}-{str(l['payer']).lower()}-{l['amount']}"
+        )
         if key not in seen:
             seen[key] = l
     logs = sorted(seen.values(), key=lambda l: l["block_number"])
@@ -20,7 +25,8 @@ def compute_flags(logs, agent=None):
         p = l["payer"].lower()
         per_payer[p] = per_payer.get(p, 0) + 1
     top_payer, top_count = max(per_payer.items(), key=lambda kv: kv[1], default=("", 0))
-    top_payer_share_bps = round(top_count * 10000 / len(logs)) if logs else 0
+    # Half-up rounding to match JS Math.round() in sdk/src/flags.js.
+    top_payer_share_bps = (top_count * 10000 * 2 + len(logs)) // (2 * len(logs)) if logs else 0
 
     intervals = [logs[i]["block_number"] - logs[i - 1]["block_number"]
                  for i in range(1, len(logs))]

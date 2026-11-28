@@ -5,7 +5,8 @@ export const chain: Chain;
 export interface Addresses {
   tally: `0x${string}`;
   deployBlock: bigint;
-  receipts: `0x${string}`;
+  v1: `0x${string}`;
+  v1DeployBlock: bigint;
   policy: `0x${string}`;
   heuristics: `0x${string}`;
   bondToken: `0x${string}`;
@@ -17,7 +18,7 @@ export interface CreateClientOptions {
   rpcUrl?: string;
   /** an EIP-1193 provider to ride instead of http */
   provider?: unknown;
-  /** tally contract address (default: mainnet v1) */
+  /** tally contract address (default: mainnet v2 Receipts) */
   address?: `0x${string}`;
   /** getLogs lower bound */
   deployBlock?: bigint;

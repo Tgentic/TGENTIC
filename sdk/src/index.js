@@ -99,6 +99,7 @@ export function createClient({ rpcUrl, provider, address = addresses.tally, depl
 
     /** The latest n receipts across all agents. */
     async recent(n = 10) {
+      if (!Number.isInteger(n) || n <= 0) return [];
       const logs = await tallied();
       return logs.slice(-n).reverse().map((l) => ({
         agent: l.args.agent, payer: l.args.payer, amount: l.args.amount, rating: Number(l.args.rating),
@@ -106,11 +107,31 @@ export function createClient({ rpcUrl, provider, address = addresses.tally, depl
       }));
     },
 
-    /** Leaderboard rows: one entry per agent with a score and a flag marker. */
+    /** Leaderboard rows: one entry per agent, ranked by counted score, with flag markers. */
     async top(limit = 100) {
+      if (!Number.isInteger(limit) || limit <= 0) return [];
       const logs = await tallied();
-      const agents = [...new Set(logs.map((l) => l.args.agent))].slice(0, limit);
-      return Promise.all(agents.map(async (a) => ({ agent: a, ...(await api.score(a)), flags: (await api.risk(a)).flags })));
+      const byAgent = new Map();
+      for (const l of logs) {
+        const key = l.args.agent.toLowerCase();
+        if (!byAgent.has(key)) byAgent.set(key, { agent: l.args.agent, logs: [] });
+        byAgent.get(key).logs.push({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash });
+      }
+      // Rank via score() alone (1 eth_call/agent, bounded concurrency) so full 8-call
+      // profile reads only run for the top `limit` agents.
+      const entries = [...byAgent.values()];
+      const ranked = [];
+      for (let i = 0; i < entries.length; i += 20) {
+        const chunk = entries.slice(i, i + 20);
+        const scores = await Promise.all(chunk.map((e) => read("score", [e.agent])));
+        for (let j = 0; j < chunk.length; j++) ranked.push({ ...chunk[j], score: scores[j] });
+      }
+      ranked.sort((x, y) => (y.score > x.score ? 1 : y.score < x.score ? -1 : 0));
+      return Promise.all(ranked.slice(0, limit).map(async ({ agent, logs: alogs }) => ({
+        agent,
+        ...(await api.score(agent)),
+        flags: computeFlags(alogs, agent).flags,
+      })));
     },
 
     /**

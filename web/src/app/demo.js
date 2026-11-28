@@ -59,8 +59,8 @@ export const api = {
   demoAgents: agents.map((g) => g.a),
   readToken: async () => { await sleep(350); return TOKEN; },
   readAgent: async (a) => { await sleep(700); return readAgentNow(a); },
-  receipts: async (a) => { await sleep(500); return logs.filter((l) => l.args.agent.toLowerCase() === a.toLowerCase()).slice(-50).reverse(); },
-  recent: async (n = 8) => { await sleep(600); return logs.slice(-n).reverse(); },
+  receipts: async (a) => { await sleep(500); return logs.filter((l) => l.args.agent.toLowerCase() === a.toLowerCase()).reverse(); },
+  recent: async (n = 8) => { await sleep(600); return !Number.isInteger(n) || n <= 0 ? [] : logs.slice(-n).reverse(); },
   board: async () => {
     await sleep(900);
     return { tk: TOKEN, rows: agents.map((g) => ({ a: g.a, ...readAgentNow(g.a), flags: flagsFor(g.a, logs.filter((l) => l.args.agent === g.a)).flags })) };
