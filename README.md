@@ -66,7 +66,7 @@ deployments/      addresses written by the deploy scripts
 manifests/        signed agent manifests (tgentic/agent-manifest/1), verifiable offline
 test/             contract + gate + policy + heuristics + sdk + manifest + mcp + erc8004-links
 docs/             design notes — the thinking before the code (time-weighted scoring, ERC-8004 census, agent manifests, security review, ecosystem payments)
-tools/            context.py (one-call project briefing) + immune.py (security scanner) + manifest sign/verify + watch-receipts.py + fuzz sims
+tools/            context.py (one-call project briefing) + immune.py (security scanner) + manifest sign/verify + watch-receipts.py + fuzz sims + Python client tools (tgentic_spec.py, buy-report.py, tally.py)
 ```
 
 ## Quickstart
@@ -116,6 +116,20 @@ node tools/buy-report.mjs <agent-address> --key 0xPAYER_KEY --out report.json
 node tools/grant-view.mjs --key 0xPAYER_KEY --viewer 0xMARKETPLACE --days 30
 # mints a viewing grant: delegated read of your receipt history —
 # signed, scoped, expiring, never spending power
+```
+
+The same loop in Python — `tools/tgentic_spec.py` re-implements the signing
+specs (canonical report JSON, payer feedback, EIP-3009) and every tool
+verifies against the live gate:
+
+```bash
+pip install eth-account requests
+
+python3 tools/buy-report.py <agent> --key 0xPAYER_KEY [--html] [--out file]
+# offer → EIP-3009 sign → pay → recover the report signer locally → save
+
+python3 tools/tally.py <agent> <tx-hash> --rating 5 --key 0xPAYER_KEY
+# payer-signed feedback → receipt on the reputation contract
 ```
 
 Run the paid agent example:
