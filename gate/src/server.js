@@ -86,7 +86,8 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     };
 
     if (req.method === "OPTIONS") return send(204);
-    if (req.method === "GET" && pathname === "/health") return send(200, { ok: true, chainId: ctx.chainId });
+    if (req.method === "GET" && pathname === "/health")
+      return send(200, { ok: true, chainId: ctx.chainId, manifests: ctx.manifests?.byAgent?.size ?? 0 });
     // Step 6: serve the current verified manifest for an agent — plain HTTP
     // identity lookup, same store the MCP get_agent_identity tool reads.
     if (req.method === "GET" && pathname.startsWith("/manifest/")) {
