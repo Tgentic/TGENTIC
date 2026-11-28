@@ -5,6 +5,7 @@ import { getAddress } from "viem";
 import { GateError, handleTally } from "./core.js";
 import { assessAgent } from "./heuristics.js";
 import { handleMcp } from "./mcp.js";
+import { manifestHash } from "./manifest.js";
 
 const MAX_BODY = 4096;
 
@@ -88,12 +89,20 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     if (req.method === "OPTIONS") return send(204);
     if (req.method === "GET" && pathname === "/health")
       return send(200, { ok: true, chainId: ctx.chainId, manifests: ctx.manifests?.byAgent?.size ?? 0 });
+    // Step 6: manifest index — every trusted tip in the store, so clients
+    // (the dapp's directory) can resolve identities in one call.
+    if (req.method === "GET" && pathname === "/manifests") {
+      const list = [...(ctx.manifests?.byAgent?.values() ?? [])]
+        .map((m) => ({ agent: m.agent, agentId: m.agentId ?? null, name: m.name, version: m.version, demo: m.demo === true, manifestHash: manifestHash(m) }))
+        .sort((a, b) => (a.agentId ?? 1e9) - (b.agentId ?? 1e9) || a.name.localeCompare(b.name));
+      return send(200, { manifests: list });
+    }
     // Step 6: serve the current verified manifest for an agent — plain HTTP
     // identity lookup, same store the MCP get_agent_identity tool reads.
     if (req.method === "GET" && pathname.startsWith("/manifest/")) {
       const addr = pathname.slice("/manifest/".length).replace(/\.json$/i, "").toLowerCase();
       const m = /^0x[0-9a-f]{40}$/.test(addr) ? ctx.manifests?.byAgent?.get(addr) : null;
-      return m ? send(200, m) : send(404, { error: "NO_MANIFEST", message: "No verified manifest for this agent." });
+      return m ? send(200, { ...m, manifestHash: manifestHash(m) }) : send(404, { error: "NO_MANIFEST", message: "No verified manifest for this agent." });
     }
 
     // Streamable HTTP transport's optional SSE channel for server-initiated

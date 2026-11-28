@@ -221,6 +221,14 @@ describe("gate", function () {
       expect((await ok.json()).name).to.equal("served agent");
       expect((await fetch(`${base}/manifest/${other.address}`)).status).to.equal(404);
       expect((await fetch(`${base}/manifest/not-an-address`)).status).to.equal(404);
+      const idx = await fetch(`${base}/manifests`);
+      expect(idx.status).to.equal(200);
+      const { manifests } = await idx.json();
+      expect(manifests).to.have.length(1);
+      expect(manifests[0].agent).to.equal(agent.address);
+      expect(manifests[0].manifestHash).to.equal(mf.manifestHash(manifest));
+      const served = await (await fetch(`${base}/manifest/${agent.address}`)).json();
+      expect(served.manifestHash).to.equal(mf.manifestHash(manifest));
     } finally {
       server.close();
     }

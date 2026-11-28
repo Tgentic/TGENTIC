@@ -3,6 +3,7 @@ import { formatUnits, getAddress, isAddress, parseUnits } from "viem";
 import { api as chainApi } from "./chain.js";
 import { flagsFor, FLAG_TEXT } from "./flags.js";
 import { erc8004Of, EXPLORER } from "./erc8004.js";
+import { fetchManifest, fetchManifestMap } from "./manifests.js";
 import { HAS_PRIVY } from "./privy.js";
 import { useLogin, usePrivy, useWallets } from "@privy-io/react-auth";
 import { api as demoApi } from "./demo.js";
@@ -120,12 +121,12 @@ function Recent() {
 
 function Profile({ a }) {
   const [st, retry] = useLoad(async () => {
-    const [d, tk, logs] = await Promise.all([api.readAgent(a), api.readToken(), api.receipts(a)]);
-    return { d, tk, logs };
+    const [d, tk, logs, man] = await Promise.all([api.readAgent(a), api.readToken(), api.receipts(a), fetchManifest(a)]);
+    return { d, tk, logs, man };
   }, [a], POLL_MS);
   if (st.s === "loading") return <Loading what="this agent" />;
   if (st.s === "error") return <Failed text={st.text} retry={retry} />;
-  const { d, tk, logs } = st.data;
+  const { d, tk, logs, man } = st.data;
   const counted = d.bond >= tk.minBond;
   const payers = [...new Set(logs.map((l) => l.args.payer))];
   const ratio = tk.minBond > 0n ? Math.min(1, Number((d.bond * 1000n) / tk.minBond) / 1000) : 1;
@@ -150,6 +151,21 @@ function Profile({ a }) {
         <div className={d.receipts > 0n && d.payers === 1n ? "flag" : ""}><dt>Unique payers</dt><dd>{String(d.payers)}</dd>{d.receipts > 0n && d.payers === 1n && <small>One payer only. Treat with care.</small>}</div>
         <div><dt>Bond</dt><dd>{tok(d.bond, tk.decimals)} <small>{tk.symbol}</small></dd></div>
       </dl>
+
+      {man && (
+        <section className="block" aria-label="Agent identity">
+          <h2>Agent identity {man.demo && <span className="e8-chip mono" title="Labeled sample identity — not a real operator">demo</span>}</h2>
+          <dl className="stats two">
+            <div><dt>Name</dt><dd>{man.name}</dd></div>
+            <div><dt>Manifest</dt><dd>v{man.version}{man.agentId ? ` · agentId #${man.agentId}` : ""}</dd></div>
+            <div><dt>Endpoints</dt><dd>{man.endpoints?.length ? man.endpoints.map((e) => <a key={e.name} href={e.url} target="_blank" rel="noreferrer">{e.name} ↗</a>) : "none declared"}</dd></div>
+            <div><dt>Signing keys</dt><dd className="mono">{man.signingKeys?.length ?? 0} authorized</dd></div>
+          </dl>
+          <ul className="sigs">
+            <li><span className="mono mute">manifestHash · EIP-191 verified</span> <a className="mono" href={`https://github.com/Tgentic/TGENTIC/blob/main/manifests/${a.toLowerCase()}.json`} target="_blank" rel="noreferrer">{short(man.manifestHash)} verify ↗</a></li>
+          </ul>
+        </section>
+      )}
 
       {erc8004Of(a) ? (
         <section className="block" aria-label="ERC-8004 registration">
@@ -237,7 +253,11 @@ function Lookup({ param }) {
 /* ------------------------------- Directory ------------------------------- */
 
 function Board() {
-  const [st, retry] = useLoad(() => (api.deployed ? api.board() : Promise.resolve(null)), [], POLL_MS);
+  const [st, retry] = useLoad(async () => {
+    if (!api.deployed) return null;
+    const [data, mans] = await Promise.all([api.board(), fetchManifestMap()]);
+    return { ...data, mans };
+  }, [], POLL_MS);
   const [q, setQ] = useState("");
   return (
     <div className="page">
@@ -249,7 +269,7 @@ function Board() {
       {api.deployed && st.s === "loading" && <Loading what="receipts" />}
       {api.deployed && st.s === "error" && <Failed text={st.text} retry={retry} />}
       {api.deployed && st.s === "done" && (() => {
-        const { tk, rows } = st.data;
+        const { tk, rows, mans } = st.data;
         const ranked = rows.map((r) => ({ ...r, counted: r.bond >= tk.minBond })).sort((x, y) => Number((y.counted ? y.score : 0n) - (x.counted ? x.score : 0n)));
         if (ranked.length === 0) return <p className="state">No receipts recorded yet. The directory fills as the verifier tallies payments.</p>;
         const top = ranked.find((r) => r.counted)?.score || 1n;
@@ -267,7 +287,11 @@ function Board() {
                 <a className="board-row" href={`#/lookup/${r.a}`}>
                   <span className="rank mono">{String(ranked.indexOf(r) + 1).padStart(2, "0")}</span>
                   <Identicon address={r.a} size={32} />
-                  <span className="mono">{short(r.a)}</span>
+                  {mans.get(r.a.toLowerCase()) ? (
+                    <span className="b-id"><span className="b-name">{mans.get(r.a.toLowerCase()).name}</span><span className="b-addr mono">{short(r.a)}</span></span>
+                  ) : (
+                    <span className="mono">{short(r.a)}</span>
+                  )}
                   {erc8004Of(r.a) && <a className="e8-chip mono" href={`${EXPLORER}/tx/${erc8004Of(r.a).registerTx}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title={`ERC-8004 agentId ${erc8004Of(r.a).agentId} — registration tx in the official trust registry`}>8004</a>}
                   <PixelBar ratio={r.counted ? Number((r.score * 1000n) / top) / 1000 : 0} cells={20} label={r.counted ? `Score ${usd(r.score)}` : "Score hidden"} />
                   <span className="b-score">{r.counted ? usd(r.score) : <span className="warn-text">hidden</span>}</span>
