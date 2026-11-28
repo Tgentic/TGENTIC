@@ -158,13 +158,17 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
             ...(manifest ? { name: manifest.name, manifestVerified: true } : {}),
           };
         }));
-        const minScore = q.get("minScore") ? BigInt(q.get("minScore")) : 0n;
-        const minReceipts = q.get("minReceipts") ? BigInt(q.get("minReceipts")) : 0n;
-        const flagged = q.get("flagged");
+        const num = (k) => q.get(k);
+        if ((num("minScore") && !/^\d+$/.test(num("minScore"))) || (num("minReceipts") && !/^\d+$/.test(num("minReceipts"))))
+          return send(400, { error: "BAD_INPUT", message: "minScore and minReceipts must be non-negative integers." });
+        const minScore = num("minScore") ? BigInt(num("minScore")) : 0n;
+        const minReceipts = num("minReceipts") ? BigInt(num("minReceipts")) : 0n;
+        // only an explicit true/false applies the flag filter — typos get all rows, not a surprising subset
+        const flagged = { true: true, false: false }[q.get("flagged")] ?? null;
         const sort = { receipts: "receipts", payers: "payers" }[q.get("sort")] ?? "score";
         const limit = Math.min(Math.max(parseInt(q.get("limit") ?? "50", 10) || 50, 1), 100);
         const agents = rows
-          .filter((r) => BigInt(r.score) >= minScore && BigInt(r.receipts) >= minReceipts && (flagged === null || r.flagged === (flagged === "true")))
+          .filter((r) => BigInt(r.score) >= minScore && BigInt(r.receipts) >= minReceipts && (flagged === null || r.flagged === flagged))
           .sort((a, b) => (BigInt(b[sort]) > BigInt(a[sort]) ? 1 : -1))
           .slice(0, limit);
         return send(200, { agents, total: rows.length, source: ctx.tgentic });

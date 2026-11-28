@@ -262,6 +262,9 @@ describe("gate", function () {
       expect((await (await fetch(`${base}/agents?minReceipts=2`)).json()).agents).to.have.length(0);
       const clean = await (await fetch(`${base}/agents?flagged=false`)).json();
       expect(clean.agents.every((a) => !a.flagged)).to.equal(true);
+      // bad input → 400, not a 500
+      expect((await fetch(`${base}/agents?minScore=abc`)).status).to.equal(400);
+      expect((await fetch(`${base}/agents?minReceipts=1e5`)).status).to.equal(400);
     } finally {
       server.close();
     }
