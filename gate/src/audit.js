@@ -32,6 +32,10 @@ const usdgAbi = [
     type: "function", name: "authorizationState", stateMutability: "view", outputs: [{ type: "bool" }],
     inputs: [{ name: "authorizer", type: "address" }, { name: "nonce", type: "bytes32" }],
   },
+  {
+    type: "function", name: "balanceOf", stateMutability: "view", outputs: [{ type: "uint256" }],
+    inputs: [{ name: "a", type: "address" }],
+  },
 ];
 
 const transferEvent = [{ type: "event", name: "Transfer", inputs: [
@@ -145,6 +149,11 @@ async function verifyPayment(ctx, payload) {
     address: ctx.usdg, abi: usdgAbi, functionName: "authorizationState", args: [from, auth.nonce],
   });
   if (used) return invalid("nonce_already_used");
+  // An underfunded payer only buys us a reverted settle — reject it up front.
+  const balance = await ctx.publicClient.readContract({
+    address: ctx.usdg, abi: usdgAbi, functionName: "balanceOf", args: [from],
+  });
+  if (balance < value) return invalid("insufficient_balance");
   return { isValid: true, payer: from };
 }
 
