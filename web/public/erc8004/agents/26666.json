@@ -14,7 +14,7 @@
     },
     {
       "name": "audit",
-      "endpoint": "https://audit.tgentic.xyz/report"
+      "endpoint": "https://www.tgentic.xyz/audit/report"
     },
     {
       "name": "manifest",

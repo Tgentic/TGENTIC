@@ -270,6 +270,58 @@ describe("gate", function () {
     }
   });
 
+  it("HTTP: GET /audit/report is absent without AUDITOR_KEY, 402-gated when configured", async () => {
+    // unconfigured gate: no paid surface
+    const off = srv.createServer(ctx).listen(0);
+    await new Promise((r) => off.once("listening", r));
+    try {
+      expect((await fetch(`http://127.0.0.1:${off.address().port}/audit/report?agent=${agent.address}`)).status).to.equal(404);
+    } finally {
+      off.close();
+    }
+
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    ctx.audit = {
+      account: privateKeyToAccount(generatePrivateKey()),
+      settler: mk(facil.address).walletClient,
+      payTo: agent.address, amount: "10000", name: "test auditor",
+    };
+    ctx.detectFromBlock = 0n;
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      // bad input is rejected before any payment is requested
+      expect((await fetch(`${base}/audit/report?agent=nope`)).status).to.equal(400);
+      // no payment header → 402 with a spec-shaped payment-required offer
+      const unpaid = await fetch(`${base}/audit/report?agent=${agent.address}`);
+      expect(unpaid.status).to.equal(402);
+      const offer = await unpaid.json();
+      expect(offer.x402Version).to.equal(2);
+      const req = offer.accepts[0];
+      expect(req.scheme).to.equal("exact");
+      expect(req.network).to.equal(`eip155:${ctx.chainId}`);
+      expect(req.asset.toLowerCase()).to.equal((await usdg.getAddress()).toLowerCase());
+      expect(req.payTo.toLowerCase()).to.equal(agent.address.toLowerCase());
+      expect(req.amount).to.equal("10000");
+      expect(unpaid.headers.get("payment-required")).to.be.a("string");
+      // garbage payment header → 402, never a 500
+      const bad = await fetch(`${base}/audit/report?agent=${agent.address}`, { headers: { "payment-signature": "!!not-b64!!" } });
+      expect(bad.status).to.equal(402);
+      // well-formed but wrong scheme → rejected without settling
+      const wrong = Buffer.from(JSON.stringify({
+        x402Version: 2,
+        accepted: { scheme: "upto", network: `eip155:${ctx.chainId}` },
+        payload: { signature: "0x" + "12".repeat(65), authorization: { from: payer.address, to: agent.address, value: "10000", validAfter: "0", validBefore: "9999999999", nonce: ethers.id("n") } },
+      })).toString("base64");
+      expect((await fetch(`${base}/audit/report?agent=${agent.address}`, { headers: { "payment-signature": wrong } })).status).to.equal(402);
+    } finally {
+      server.close();
+      delete ctx.audit;
+    }
+  });
+
   it("HTTP: GET /mcp gives browsers the docs page and MCP clients the SSE channel", async () => {
     const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
     const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));

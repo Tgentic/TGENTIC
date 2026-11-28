@@ -1,6 +1,6 @@
 {
   "type": "tgentic/agent-manifest/1",
-  "version": 2,
+  "version": 3,
   "chainId": 4663,
   "agent": "0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225",
   "agentId": 26666,
@@ -8,7 +8,7 @@
   "endpoints": [
     {
       "name": "audit",
-      "url": "https://audit.tgentic.xyz/report"
+      "url": "https://www.tgentic.xyz/audit/report"
     },
     {
       "name": "web",
@@ -18,6 +18,6 @@
   "signingKeys": [
     "0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225"
   ],
-  "issuedAt": "2026-11-28T16:39:10.969Z",
-  "signature": "0x680baa260de9a1e120e9aa0f160e06cfb2c557570f04359ac23ae80e70f28ddb4a8155ce6f7bdf1ca80807dd2deb635fedf2cf504604a31fd40c1375fc50e3fc1c"
+  "issuedAt": "2026-11-28T17:06:39.046Z",
+  "signature": "0x842fbfc71b43db702fb742284f999e93af9d3e11f637e80deb86fb0e21ca2c3a05522ca8a4e2fa34b1c79a7ce10de5d50011f08e81ff00ebf4bce123f738eea61b"
 }

@@ -6,6 +6,7 @@ import { GateError, handleTally } from "./core.js";
 import { assessAgent, computeFlags, DEFAULT_FROM_BLOCK, LOG_BLOCK_RANGE } from "./heuristics.js";
 import { handleMcp } from "./mcp.js";
 import { manifestHash } from "./manifest.js";
+import { handleAudit } from "./audit.js";
 
 const MAX_BODY = 4096;
 
@@ -97,13 +98,15 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // agent browsers) — it gets an open origin regardless of ALLOWED_ORIGIN.
     const origin = pathname === "/mcp" ? "*" : allowedOrigin;
 
-    const send = (status, obj) => {
+    const send = (status, obj, extraHeaders) => {
       res.writeHead(status, {
         ...SECURITY_HEADERS,
         "content-type": "application/json",
         "access-control-allow-origin": origin,
         "access-control-allow-methods": "GET, POST, OPTIONS",
-        "access-control-allow-headers": "content-type, mcp-protocol-version",
+        "access-control-allow-headers": "content-type, mcp-protocol-version, payment-signature, x-payment",
+        "access-control-expose-headers": "payment-required, payment-response",
+        ...extraHeaders,
       });
       res.end(obj === undefined ? "" : JSON.stringify(obj));
     };
@@ -206,7 +209,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     if (req.method === "POST" && pathname === "/mcp") {
       if (!allow(`${clientIp(req)}:mcp`, mcpRatePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
-    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents"))) {
+    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents" || pathname === "/audit/report"))) {
       if (!allow(clientIp(req), ratePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 
@@ -220,6 +223,20 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       } catch (e) {
         console.error("risk failed:", e?.shortMessage ?? e?.message ?? e);
         return send(500, { error: "INTERNAL", message: "The risk read failed." });
+      }
+    }
+
+    // Paid audit endpoint — x402 exact settlement in USDG, report signed by the
+    // auditor key. Only mounted when AUDITOR_KEY is configured; without it the
+    // route is absent (no half-working paid surface).
+    if (req.method === "GET" && pathname === "/audit/report") {
+      if (!ctx.audit) return send(404, { error: "NOT_FOUND" });
+      try {
+        const out = await handleAudit(ctx, req);
+        return send(out.status, out.body, out.headers);
+      } catch (e) {
+        console.error("audit failed:", e?.shortMessage ?? e?.message ?? e);
+        return send(500, { error: "INTERNAL", message: "The audit request failed." });
       }
     }
 

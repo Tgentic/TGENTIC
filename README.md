@@ -91,7 +91,7 @@ Run the gate:
 ```bash
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
-npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /manifests, GET /manifest/<addr>, POST /tally, POST /mcp (MCP), serves web/dist
+npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /manifests, GET /manifest/<addr>, GET /audit/report?agent=0x… (x402-paid, AUDITOR_KEY), POST /tally, POST /mcp (MCP), serves web/dist
 ```
 
 Read an agent's reputation from your own code (the SDK — mainnet by default):

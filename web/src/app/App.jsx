@@ -344,7 +344,7 @@ function Audit({ a }) {
       <p className="hint">
         Auditor: <a href={`#/lookup/${AUDITOR}`}>TGENTIC auditor {isAuditor ? "(this agent)" : ""}</a> · agentId #26666 ·
         issued {new Date().toISOString()} · <strong>unsigned preview</strong> — the signed report (verifiable offline)
-        is sold over x402 for 0.01 USDG at <span className="mono">audit.tgentic.xyz/report</span>.
+        is sold over x402 for 0.01 USDG at <span className="mono">tgentic.xyz/audit/report</span>.
       </p>
     </article>
   );

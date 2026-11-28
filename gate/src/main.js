@@ -59,8 +59,31 @@ if (!policy && env.ALLOW_V1_MODE !== "1") {
 }
 if (!policy) console.warn("ALLOW_V1_MODE=1 — legacy v1 mode: the gate key writes tallies directly, no policy quorum.");
 
+// Paid audit endpoint (/audit/report). AUDITOR_KEY signs reports with the
+// auditor identity; settlement goes through the facilitator wallet, which must
+// be in FACILITATORS or the sale will not tally as a receipt. Disabled when no
+// auditor key is configured.
+let audit = null;
+if (env.AUDITOR_KEY) {
+  const auditorAccount = privateKeyToAccount(env.AUDITOR_KEY);
+  const settlerKey = env.AUDITOR_SETTLER_KEY ?? env.FACILITATOR_PRIVATE_KEY;
+  const settler = settlerKey
+    ? makeClients({ chainId, rpcUrl, privateKey: settlerKey }).walletClient
+    : walletClient;
+  if (!facilitators.some((f) => f.toLowerCase() === settler.account.address.toLowerCase()))
+    console.warn(`audit settler ${settler.account.address} is not in FACILITATORS — sales will settle but not tally`);
+  audit = {
+    account: auditorAccount,
+    settler,
+    payTo: getAddress(env.AUDITOR_PAY_TO ?? auditorAccount.address),
+    amount: env.AUDITOR_PRICE_ATOMIC ?? "10000",
+    name: env.AUDITOR_NAME ?? "TGENTIC auditor",
+    ...(env.AUDITOR_AGENT_ID ? { agentId: Number(env.AUDITOR_AGENT_ID) } : {}),
+  };
+}
+
 const ctx = {
-  publicClient, walletClient, chainId,
+  publicClient, walletClient, chainId, audit,
   tgentic: getAddress(tgentic), usdg: getAddress(usdg),
   policy, signers,
   facilitators: new Set(facilitators.map((a) => a.toLowerCase())),
