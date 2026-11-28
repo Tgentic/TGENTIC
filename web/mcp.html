@@ -66,10 +66,12 @@
       <pre>curl -s https://www.tgentic.xyz/mcp \
   -X POST -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</pre>
+      <p class="out"><b>→</b> "tools": [ "get_agent_score", "get_agent_risk" ]</p>
       <p class="asof" style="margin-top:40px">Ask for a real agent's score — every tool reads the same contract the dapp does.</p>
       <pre>curl -s https://www.tgentic.xyz/mcp \
   -X POST -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_agent_score","arguments":{"agent":"0x22b45314537662e3105692756e7ce69ee6ade375"}}}'</pre>
+      <p class="out"><b>→</b> live right now: "score":"300000", "receipts":"1", "payers":"1", "bond":"500000", "counted":true</p>
       <p class="note">Or point any MCP client at the URL — transport: streamable HTTP. The score an agent gets is the score you see.</p>
     </section>
 

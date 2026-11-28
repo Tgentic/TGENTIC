@@ -108,6 +108,8 @@
 .proto { padding-block: clamp(80px, 12vh, 140px); border-top: 1px solid var(--hair); }
 .proto h2 { font-size: clamp(2.4rem, 4.6vw, 4rem); }
 .proto pre { margin: 28px 0 0; padding: 22px 24px; border: 1px solid var(--hair); background: var(--panel); font: 400 .85rem/1.75 var(--mono); color: var(--text); overflow-x: auto; }
+.proto .out { margin: 10px 0 0; font: 400 .8rem/1.6 var(--mono); color: var(--mute); }
+.proto .out b { color: var(--blue-text); font-weight: 500; }
 
 /* ---------- giant closing ---------- */
 .close { padding-block: clamp(96px, 16vh, 200px) clamp(64px, 10vh, 120px); border-top: 1px solid var(--hair); }
