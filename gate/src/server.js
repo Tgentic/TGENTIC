@@ -186,7 +186,12 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       return send(200, { ok: true, chainId: ctx.chainId, manifests: ctx.manifests?.byAgent?.size ?? 0 });
     // Step 6: manifest index — every trusted tip in the store, so clients
     // (the dapp's directory) can resolve identities in one call.
+    // Humans get the dapp page for the same data — raw JSON is for clients.
+    const browser = req.headers.accept?.includes("text/html");
+    const dapp = (hash) => res.writeHead(302, { location: `/app#${hash}`, ...SECURITY_HEADERS }).end();
+
     if (req.method === "GET" && pathname === "/manifests") {
+      if (browser) return dapp("/directory");
       const list = [...(ctx.manifests?.byAgent?.values() ?? [])]
         .map((m) => ({ agent: m.agent, agentId: m.agentId ?? null, name: m.name, version: m.version, demo: m.demo === true, manifestHash: manifestHash(m) }))
         .sort((a, b) => (a.agentId ?? 1e9) - (b.agentId ?? 1e9) || a.name.localeCompare(b.name));
@@ -196,6 +201,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // identity lookup, same store the MCP get_agent_identity tool reads.
     if (req.method === "GET" && pathname.startsWith("/manifest/")) {
       const addr = pathname.slice("/manifest/".length).replace(/\.json$/i, "").toLowerCase();
+      if (browser && /^0x[0-9a-f]{40}$/.test(addr)) return dapp(`/audit/${addr}`);
       // Return the raw signed artifact — annotating it (e.g. a manifestHash
       // field) would change the canonical bytes and break verifyManifest for
       // anyone round-tripping it into /tally. Clients derive the hash from
@@ -216,6 +222,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     }
 
     if (req.method === "GET" && pathname === "/agents") {
+      if (browser) return dapp("/agents");
       try {
         const q = new URL(req.url, "https://x").searchParams;
         const logs = await ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedEvents, fromBlock: ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, blockRange: LOG_BLOCK_RANGE });
@@ -252,6 +259,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       const raw = decodeURIComponent(pathname.slice("/agents/".length)).trim();
       if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) return send(400, { error: "BAD_AGENT", message: "Send a 20-byte hex address: /agents/0x…" });
       const agent = getAddress(raw.toLowerCase());
+      if (browser) return dapp(`/audit/${agent}`);
       try {
         const logs = await ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedEvents, args: { agent }, fromBlock: ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, blockRange: LOG_BLOCK_RANGE });
         const mine = logs.map((l) => ({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash }));
@@ -295,6 +303,15 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
         console.error("payer lookup failed:", e?.shortMessage ?? e?.message ?? e);
         return send(500, { error: "INTERNAL", message: "The payer lookup failed." });
       }
+    }
+
+    // The audit page lives in the dapp — deep-link the whole /audit tree there.
+    // Without this, /audit/<addr> fell through to the SPA fallback and served
+    // the landing page. (/audit/report and /audit/quote are API routes, matched above.)
+    if (req.method === "GET" && pathname === "/audit") return dapp("/audit");
+    if (req.method === "GET" && pathname.startsWith("/audit/")) {
+      const p = decodeURIComponent(pathname.slice("/audit/".length)).trim();
+      if (/^0x[0-9a-fA-F]{40}$/.test(p)) return dapp(`/audit/${p}`);
     }
 
     // Step 7: live reputation stream — Tallied events as they land on chain,
@@ -353,6 +370,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     if (req.method === "GET" && pathname === "/risk") {
       const agent = new URL(req.url, "https://x").searchParams.get("agent") ?? "";
       if (!/^0x[0-9a-fA-F]{40}$/.test(agent)) return send(400, { error: "BAD_AGENT", message: "Send ?agent=0x… (an address)." });
+      if (browser) return dapp(`/audit/${agent}`);
       try {
         // Normalize casing the way explorers do — viem rejects a mixed-case address
         // whose EIP-55 checksum doesn't match, which made those queries a 500.

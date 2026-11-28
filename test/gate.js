@@ -521,6 +521,31 @@ describe("gate", function () {
     delete ctx.audit;
   });
 
+  it("HTTP: browsers are redirected to the dapp for human-facing routes", async () => {
+    ctx.detectFromBlock = 0n;
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const br = { headers: { accept: "text/html,application/xhtml+xml" }, redirect: "manual" };
+    try {
+      expect((await fetch(`${base}/audit`, br)).headers.get("location")).to.equal("/app#/audit");
+      expect((await fetch(`${base}/audit/${agent.address}`, br)).headers.get("location")).to.equal(`/app#/audit/${agent.address}`);
+      expect((await fetch(`${base}/agents`, br)).headers.get("location")).to.equal("/app#/agents");
+      expect((await fetch(`${base}/agents/${agent.address}`, br)).headers.get("location")).to.equal(`/app#/audit/${agent.address}`);
+      expect((await fetch(`${base}/manifests`, br)).headers.get("location")).to.equal("/app#/directory");
+      expect((await fetch(`${base}/manifest/${agent.address}`, br)).headers.get("location")).to.equal(`/app#/audit/${agent.address.toLowerCase()}`);
+      expect((await fetch(`${base}/risk?agent=${agent.address}`, br)).headers.get("location")).to.equal(`/app#/audit/${agent.address}`);
+      // clients without a browser Accept still get JSON everywhere
+      for (const u of [`/agents/${agent.address}`, `/agents`, `/manifests`, `/risk?agent=${agent.address}`]) {
+        const j = await fetch(`${base}${u}`);
+        expect(j.headers.get("content-type")).to.include("application/json");
+      }
+    } finally {
+      server.closeAllConnections?.();
+      server.close();
+    }
+  });
+
   it("HTTP: GET /mcp gives browsers the docs page and MCP clients the SSE channel", async () => {
     const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
     const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));
