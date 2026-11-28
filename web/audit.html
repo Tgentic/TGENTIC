@@ -28,6 +28,7 @@
     <nav aria-label="Sections">
       <a href="#report">The report</a>
       <a href="#buy">Buy it</a>
+      <a href="#code">From code</a>
       <a href="#source">Source</a>
       <a href="/app">Open the dapp</a>
     </nav>
@@ -76,6 +77,23 @@ curl -s https://www.tgentic.xyz/audit/report?agent=0x… \
   -H 'payment-signature: &lt;base64 payment payload&gt;'
 → 200 signed report + PAYMENT-RESPONSE {"success":true,"transaction":"0x…"}</pre>
       <p class="note">Reputation-weighted pricing: buyers with a counted score pay less — 50% off at score ≥ 1M, 25% at ≥ 100k. Pass <code>&amp;buyer=0x…</code> for your price, or check <code>GET /audit/quote?buyer=0x…</code>. Settlement is our own whitelisted facilitator wallet — the payment tallies as a receipt for the auditor, so every sale grows (or damages) the reputation it sells. Free preview, unsigned: the same fields on the audit page in the dapp.</p>
+    </section>
+
+    <section class="proto wrap" id="code" data-label="from code" aria-labelledby="h-code">
+      <h2 id="h-code">From code.</h2>
+      <p class="asof">JavaScript — the SDK does the whole loop: offer, sign, pay, verify the signature.</p>
+      <pre>import { createGateClient } from "tgentic-sdk";
+const gate = createGateClient();
+const { report, settle } = await gate.buyAudit("0xAgentAddress", walletClient);
+// report.signature recovers the auditor — verify it yourself, offline.</pre>
+      <p class="asof" style="margin-top:40px">Python — the same loop for the majority of agent devs.</p>
+      <pre>pip install eth-account requests
+
+python3 tools/buy-report.py &lt;agent&gt; --key 0xPAYER_KEY
+# offer → EIP-3009 sign → pay → recover the signer locally → save
+python3 tools/tally.py &lt;agent&gt; &lt;tx-hash&gt; --rating 5 --key 0xPAYER_KEY
+# payer-signed feedback → a receipt on the reputation contract</pre>
+      <p class="note">Why the local verify step matters: the report signature recovers the auditor's key from <em>your copy</em> of the document — the trust check never trusts the server that served it. <a href="https://github.com/Tgentic/TGENTIC/tree/main/tools" target="_blank" rel="noreferrer"><code>tools/</code> on GitHub</a> — buy-report.mjs, buy-report.py, tally.py, grant-view.mjs.</p>
     </section>
 
     <section class="close wrap" id="source" data-label="read the source" aria-labelledby="h-source">
