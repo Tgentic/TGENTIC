@@ -155,6 +155,26 @@ describe("gate", function () {
     }
   });
 
+  it("HTTP: GET /mcp gives browsers an info page and MCP clients the SSE channel", async () => {
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const page = await fetch(`${base}/mcp`, { headers: { accept: "text/html,application/xhtml+xml" } });
+      expect(page.headers.get("content-type")).to.include("text/html");
+      const html = await page.text();
+      expect(html).to.include("get_agent_score").and.to.include("get_agent_risk");
+      // no Accept header at all (health probes, curl default) also gets the page
+      const probe = await fetch(`${base}/mcp`);
+      expect(probe.headers.get("content-type")).to.include("text/html");
+      const sse = await fetch(`${base}/mcp`, { headers: { accept: "text/event-stream" } });
+      expect(sse.headers.get("content-type")).to.include("text/event-stream");
+      expect(await sse.text()).to.include("tgentic-mcp");
+    } finally {
+      server.close();
+    }
+  });
+
   it("HTTP: hostile URLs are rejected and never crash the process", async () => {
     const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
     const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));

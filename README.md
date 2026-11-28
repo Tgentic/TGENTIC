@@ -64,7 +64,7 @@ sdk-python/       tgentic — the same SDK for Python agent frameworks, zero dep
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
 manifests/        signed agent manifests (tgentic/agent-manifest/1), verifiable offline
-test/             contract (11) + gate (17) + policy (9) + heuristics (12) + sdk (9) + manifest (7) + mcp (9) + erc8004-links (2)
+test/             contract (11) + gate (18) + policy (9) + heuristics (12) + sdk (9) + manifest (7) + mcp (9) + erc8004-links (2)
 docs/             design notes — the thinking before the code (time-weighted scoring, ERC-8004 census, agent manifests, security review, ecosystem payments)
 tools/            context.py (one-call project briefing) + immune.py (security scanner) + manifest sign/verify + watch-receipts.py + fuzz sims
 ```
@@ -75,7 +75,7 @@ Needs Node.js 20 or later.
 
 ```bash
 npm install
-npm test                    # 76 tests: contract + gate + policy + heuristics + sdk + manifest + mcp on a local Hardhat network
+npm test                    # 77 tests: contract + gate + policy + heuristics + sdk + manifest + mcp on a local Hardhat network
 ```
 
 Run the dapp against a local node:
