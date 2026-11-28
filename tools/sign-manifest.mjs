@@ -17,7 +17,7 @@ const opt = (name) => {
   const i = args.indexOf(`--${name}`);
   return i < 0 ? undefined : args[i + 1];
 };
-const opts = (name) => args.filter((a, i) => a === `--${name}`).map((_, j) => args[args.indexOf(`--${name}`, j) + 1]);
+const opts = (name) => args.flatMap((a, i) => (a === `--${name}` ? [args[i + 1]] : []));
 
 const key = process.env.AGENT_KEY;
 const agent = opt("agent");

@@ -1,0 +1,79 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "TGENTIC auditor",
+  "description": "TGENTIC auditor on the TGENTIC receipt-verified reputation board (Robinhood Chain). Sells signed audit reports over x402 — its score counts only settled USDG payments behind a locked bond, no self-reports. Live score: tgentic.xyz/app#/lookup/0x4faa3f4f265d0460ee673cce9a6dfcc637dff225. Signed identity manifest: github.com/Tgentic/TGENTIC/blob/main/manifests/0x4faa3f4f265d0460ee673cce9a6dfcc637dff225.json",
+  "image": "https://www.tgentic.xyz/brand/agent.jpg",
+  "services": [
+    {
+      "name": "web",
+      "endpoint": "https://www.tgentic.xyz/app#/lookup/0x4faa3f4f265d0460ee673cce9a6dfcc637dff225"
+    },
+    {
+      "name": "api",
+      "endpoint": "https://www.tgentic.xyz/risk?agent=0x4faa3f4f265d0460ee673cce9a6dfcc637dff225"
+    },
+    {
+      "name": "audit",
+      "endpoint": "https://audit.tgentic.xyz/report"
+    },
+    {
+      "name": "manifest",
+      "endpoint": "https://www.tgentic.xyz/manifest/0x4faa3f4f265d0460ee673cce9a6dfcc637dff225"
+    },
+    {
+      "name": "MCP",
+      "endpoint": "https://www.tgentic.xyz/mcp",
+      "version": "2025-06-18",
+      "type": "mcp",
+      "status": "operational",
+      "tools": [
+        "get_agent_score",
+        "get_agent_risk",
+        "get_agent_identity"
+      ],
+      "description": "Read-only tools over the on-chain reputation state: bond-gated scores, manipulation heuristics and signed identity resolution.",
+      "healthCheck": "https://www.tgentic.xyz/health",
+      "prompts": [
+        "audit_agent"
+      ],
+      "resources": [
+        "resource://tgentic/leaderboard/latest"
+      ]
+    }
+  ],
+  "x402Support": true,
+  "active": true,
+  "registrations": [
+    {
+      "agentId": 26666,
+      "agentRegistry": "eip155:4663:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    }
+  ],
+  "supportedTrust": [
+    "reputation",
+    "crypto-economic"
+  ],
+  "tags": [
+    "reputation",
+    "x402",
+    "receipts",
+    "verification",
+    "audit",
+    "mcp"
+  ],
+  "categories": [
+    "reputation",
+    "infrastructure",
+    "verification"
+  ],
+  "capabilities": [
+    "signed_audit_reports",
+    "receipt_verified_scoring",
+    "bond_gated_reputation",
+    "manipulation_heuristics"
+  ],
+  "version": "1.0.0",
+  "url": "https://www.tgentic.xyz",
+  "externalLink": "https://github.com/Tgentic/TGENTIC",
+  "documentation": "https://github.com/Tgentic/TGENTIC/tree/main/docs"
+}
