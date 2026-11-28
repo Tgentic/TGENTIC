@@ -136,6 +136,7 @@ function Profile({ a }) {
       <header className="p-head">
         <Identicon address={a} size={64} />
         <div className="p-id"><p className="label">Agent</p><Scramble text={a} className="p-addr" /></div>
+        <a className="btn btn-line" href={`#/audit/${getAddress(a.toLowerCase())}`} title="Audit report — the same fields the signed x402 report carries">audit ↗</a>
         <a className="btn btn-line" href="#/lookup">New search</a>
       </header>
 
@@ -233,6 +234,118 @@ function Profile({ a }) {
           </div>
         )}
       </section>
+    </article>
+  );
+}
+
+/* ------------------------------- Audit report ------------------------------- */
+
+// The same fields the TGENTIC auditor signs in tgentic/audit-report/1 —
+// rendered live from the chain here, unsigned. The signed artifact is the
+// paid product (x402); this page is what the buyer's eye should verify.
+const AUDITOR = "0x4faa3f4f265d0460ee673cce9a6dfcc637dff225";
+const summarize = ({ receipts, payers, counted, flagged, flags, man }) => {
+  if (receipts === 0n)
+    return "No paid work is recorded for this agent — there is nothing to verify, not even a baseline.";
+  const parts = [`${receipts.toString()} receipt${receipts === 1n ? "" : "s"} from ${payers.toString()} unique payer${payers === 1n ? "" : "s"}`];
+  if (!counted) parts.push("bond below the counting threshold, so the score is hidden");
+  if (flagged) parts.push(`manipulation heuristics flagged: ${flags.join(", ")}`);
+  else parts.push("no manipulation flags");
+  if (!man) parts.push("no signed identity manifest");
+  return `Paid-work record: ${parts.join("; ")}.`;
+};
+
+function Audit({ a }) {
+  const [st, retry] = useLoad(async () => {
+    const [d, tk, logs, man] = await Promise.all([api.readAgent(a), api.readToken(), api.receipts(a), fetchManifest(a)]);
+    return { d, tk, logs, man };
+  }, [a], POLL_MS);
+  if (st.s === "loading") return <Loading what="audit report" />;
+  if (st.s === "error") return <Failed text={st.text} retry={retry} />;
+  const { d, tk, logs, man } = st.data;
+  const counted = d.bond >= tk.minBond;
+  const risk = flagsFor(a, logs);
+  const subject = getAddress(a.toLowerCase());
+  const isAuditor = subject.toLowerCase() === AUDITOR;
+  return (
+    <article className="profile" aria-label={`Audit report for ${subject}`}>
+      <header className="p-head">
+        <Identicon address={subject} size={64} />
+        <div className="p-id">
+          <p className="label">Audit report · tgentic/audit-report/1 · unsigned preview</p>
+          <Scramble text={subject} className="p-addr" />
+        </div>
+        <a className="btn btn-line" href={`#/lookup/${subject}`}>lookup ↗</a>
+      </header>
+
+      <p className="audit-summary">{summarize({ receipts: d.receipts, payers: d.payers, counted, flagged: risk.flagged, flags: risk.flags, man })}</p>
+
+      <section className="block" aria-label="Financials">
+        <h2>Financials</h2>
+        <dl className="stats">
+          <div><dt>Score</dt><dd>{counted ? usd(d.score) : "0.00"}</dd></div>
+          <div><dt>Reputation</dt><dd>{usd(d.reputation)}</dd></div>
+          <div><dt>Receipts</dt><dd>{String(d.receipts)}</dd></div>
+          <div><dt>Payers</dt><dd>{String(d.payers)}</dd></div>
+          <div><dt>Bond</dt><dd>{tok(d.bond, tk.decimals)} <small>{tk.symbol}</small></dd></div>
+          <div><dt>Counted</dt><dd>{counted ? "yes" : "no"}</dd></div>
+        </dl>
+      </section>
+
+      <section className="block" aria-label="Subject identity">
+        <h2>Subject identity {man?.demo && <span className="e8-chip mono">demo</span>}</h2>
+        {man ? (
+          <>
+            <dl className="stats two">
+              <div><dt>Name</dt><dd>{man.name}</dd></div>
+              <div><dt>Manifest</dt><dd>v{man.version}{man.agentId ? ` · agentId #${man.agentId}` : ""}</dd></div>
+              <div><dt>Verified</dt><dd>yes</dd></div>
+              <div><dt>manifestHash</dt><dd className="mono">{man.manifestHash ? short(man.manifestHash) : "—"}</dd></div>
+            </dl>
+          </>
+        ) : <p className="hint">No signed identity manifest served for this agent.</p>}
+      </section>
+
+      <section className="block" aria-label="Risk">
+        <h2>Risk</h2>
+        <dl className="stats two">
+          <div><dt>Flagged</dt><dd className={risk.flagged ? "flag" : ""}>{risk.flagged ? "yes" : "no"}</dd></div>
+          <div><dt>Top payer share</dt><dd>{(risk.topPayerShareBps / 100).toFixed(0)}<small>%</small></dd></div>
+          <div><dt>Top amount</dt><dd>{risk.topAmount ? usd(BigInt(risk.topAmount)) : "—"} <small>USDG</small></dd></div>
+          <div><dt>Intervals</dt><dd>{risk.intervalCount}</dd></div>
+        </dl>
+        {risk.flags.length > 0 && (
+          <ul className="sigs">
+            {risk.flags.map((f) => <li key={f}><span className="sig-tag">{f}</span>{FLAG_TEXT[f] || f}</li>)}
+          </ul>
+        )}
+      </section>
+
+      <section className="block" aria-label="Receipt evidence">
+        <h2>Receipt evidence</h2>
+        {logs.length === 0 ? <p className="state">No verified payments on record.</p> : (
+          <div className="scroll">
+            <table>
+              <thead><tr><th>Block</th><th>Payer</th><th>Amount</th><th>Rating</th><th>Payment tx</th></tr></thead>
+              <tbody>{logs.map((l, i) => (
+                <tr key={l.transactionHash + l.logIndex} style={{ "--i": Math.min(i, 20) }}>
+                  <td className="mono">{String(l.blockNumber)}</td>
+                  <td><span className="cell-id"><Identicon address={l.args.payer} size={20} />{short(l.args.payer)}</span></td>
+                  <td>{usd(l.args.amount)} <small>USDG</small></td>
+                  <td><RatingPips value={Number(l.args.rating)} /></td>
+                  <td><TxLink hash={l.args.txHash} /></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <p className="hint">
+        Auditor: <a href={`#/lookup/${AUDITOR}`}>TGENTIC auditor {isAuditor ? "(this agent)" : ""}</a> · agentId #26666 ·
+        issued {new Date().toISOString()} · <strong>unsigned preview</strong> — the signed report (verifiable offline)
+        is sold over x402 for 0.01 USDG at <span className="mono">audit.tgentic.xyz/report</span>.
+      </p>
     </article>
   );
 }
@@ -551,7 +664,7 @@ export default function App() {
         <p className="demo-bar" role="note">Demo data. Sample agents and receipts so you can see the dapp working; none of it is on chain. <a href={location.pathname + location.hash}>Leave demo</a></p>
       )}
       <main className={SHOW_DEMO_LABEL ? "has-demo" : ""}>
-        {name === "board" || name === "directory" ? <Board /> : name === "agents" ? <Agents /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : <Lookup param={param} />}
+        {name === "board" || name === "directory" ? <Board /> : name === "agents" ? <Agents /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : name === "audit" ? (isAddress(param ?? "") ? <div className="page"><Audit a={param} /></div> : <Lookup />) : <Lookup param={param} />}
       </main>
       <footer className="foot" dangerouslySetInnerHTML={FOOT} />
     </>

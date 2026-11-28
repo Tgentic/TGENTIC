@@ -215,3 +215,8 @@ td a { color: var(--blue-text); }
   .man-row .rank { display: none; }
   .man-row .b-meta { display: none; }
 }
+
+/* Audit report page (#/audit/<agent>) — mirrors the auditor's signed x402 report. */
+.audit-summary { font: 400 1.05rem/1.55 var(--mono); max-width: 72ch; margin-top: 6px; }
+.audit-meta { margin-top: 10px; }
+.audit-flags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
