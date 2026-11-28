@@ -1,6 +1,6 @@
 import { mountField } from "./field.js";
 import { ICONS, frameSVG, playOnce } from "./icons.js";
-import { CA, footerHTML } from "./links.js";
+import { CA, PONS, FOMO, footerHTML } from "./links.js";
 import { mountLogoform } from "./logoform.js";
 
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -21,6 +21,18 @@ if (form) mountLogoform(form, { scrollHost: form.closest(".form"), onProgress: (
 const caEl = document.querySelector("[data-ca]");
 const copyBtn = document.querySelector("[data-copy]");
 if (caEl && CA) caEl.textContent = CA;
+// When the token is live (deployment links set): fix the bond note and add trade links to the CA row.
+const launchNote = document.querySelector("[data-launch]");
+if (CA && launchNote) launchNote.textContent = "Live on Robinhood Chain — launched via Pons V2.";
+const tradeRow = document.querySelector("[data-trade]");
+if (CA && tradeRow) {
+  for (const [name, href] of [["Pons", PONS], ["fomo", FOMO]]) {
+    if (!href) continue;
+    const a = document.createElement("a");
+    a.className = "ca-link"; a.href = href; a.target = "_blank"; a.rel = "noreferrer"; a.textContent = name + " ↗";
+    tradeRow.appendChild(a);
+  }
+}
 copyBtn?.addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(caEl.textContent.trim()); copyBtn.textContent = "Copied"; }
   catch { copyBtn.textContent = "Press Ctrl+C"; getSelection().selectAllChildren(caEl); }

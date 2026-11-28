@@ -1,6 +1,8 @@
 // One place for the token address and public links, shared by the landing page and the dapp.
 // An empty href = not set yet: rendered as "coming soon", not a dead link.
 export const CA = ""; // fill in the token address once it is set
+export const PONS = "";
+export const FOMO = "";
 
 // 9x9 pixel glyphs for frameSVG: "1" = main color, "o" = blue accent, "." = empty.
 export const SOCIALS = [
@@ -23,7 +25,10 @@ export function footerHTML(frameSVG) {
       ? `<li><a class="soc" href="${s.href}" target="_blank" rel="noreferrer">${inner}</a></li>`
       : `<li><span class="soc soon" title="${s.name}: coming soon">${inner}<small>soon</small></span></li>`;
   }).join("");
-  const cols = COLS.map(([h, items]) => `<div class="foot-col"><h2>${h}</h2><ul>${items.map(([t, u]) => `<li><a href="${u}">${t}</a></li>`).join("")}</ul></div>`).join("");
+  // Trade column only exists where market links are set — the public repo ships none.
+  const trade = [["Pons ↗", PONS], ["fomo ↗", FOMO]].filter(([, h]) => h);
+  const allCols = trade.length ? [...COLS, ["Trade", trade]] : COLS;
+  const cols = allCols.map(([h, items]) => `<div class="foot-col"><h2>${h}</h2><ul>${items.map(([t, u]) => `<li><a href="${u}">${t}</a></li>`).join("")}</ul></div>`).join("");
   return `
   <canvas class="foot-field" aria-hidden="true"></canvas>
   <div class="wrap foot-top">
