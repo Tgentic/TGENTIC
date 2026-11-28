@@ -3,9 +3,10 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci 2>/dev/null || npm install
 COPY web/ ./
-# The dapp shares the SDK's pure detector — the import escapes web/ (../../../sdk/src/),
-# so the file must exist in the build context at that path.
+# The dapp shares the SDK's pure detector and the report renderer — the imports
+# escape web/ (../../../sdk/src/), so the files must exist in the build context.
 COPY sdk/src/flags.js /app/sdk/src/flags.js
+COPY sdk/src/report-html.js /app/sdk/src/report-html.js
 ARG VITE_PRIVY_APP_ID
 ARG VITE_TGENTIC_ADDRESS
 ARG VITE_DEPLOY_BLOCK
@@ -23,8 +24,10 @@ COPY gate/src ./gate/src
 # Step 6: the gate serves the verified manifest store — main.js resolves
 # gate/manifests first, so this copy is the one the container actually reads.
 COPY gate/manifests ./gate/manifests
-# The gate's event detector consumes the canonical flags module from the SDK.
+# The gate's event detector consumes the canonical flags module from the SDK,
+# and the paid endpoint renders reports with the shared HTML template.
 COPY sdk/src/flags.js ./sdk/src/flags.js
+COPY sdk/src/report-html.js ./sdk/src/report-html.js
 COPY --from=webbuild /app/web/dist ./web/dist
 ENV WEB_DIST=/app/web/dist
 EXPOSE 8788

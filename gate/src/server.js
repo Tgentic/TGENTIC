@@ -408,6 +408,11 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       if (!ctx.audit) return send(404, { error: "NOT_FOUND" });
       try {
         const out = await handleAudit(ctx, req);
+        // a string body is a rendered document (the HTML report) — send it raw
+        if (typeof out.body === "string") {
+          res.writeHead(out.status, { ...SECURITY_HEADERS, "access-control-allow-origin": origin, ...out.headers });
+          return res.end(out.body);
+        }
         return send(out.status, out.body, out.headers);
       } catch (e) {
         console.error("audit failed:", e?.shortMessage ?? e?.message ?? e);

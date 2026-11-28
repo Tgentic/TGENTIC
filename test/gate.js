@@ -521,6 +521,31 @@ describe("gate", function () {
     delete ctx.audit;
   });
 
+  it("the HTML report is a self-contained certificate — signed doc embedded, markup escaped", async () => {
+    const { renderReportHtml } = await import("../sdk/src/report-html.js");
+    const audit = await import("../gate/src/audit.js");
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    ctx.detectFromBlock = 0n;
+    ctx.audit = { account: privateKeyToAccount(generatePrivateKey()), settler: null, payTo: agent.address, amount: "10000", name: "test auditor" };
+    const txHash = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash, rating: 4, signature: await sign(payerW, txHash, 4) });
+    const report = await audit.buildAuditReport(ctx, agent.address);
+    const html = renderReportHtml(report, { settleTx: "0x" + "ab".repeat(32) });
+    // the deliverable carries the signature, the subject, the verdict — all of it
+    expect(html).to.include(report.signature);
+    expect(html).to.include(agent.address);
+    expect(html).to.include(report.summary);
+    expect(html).to.include(report.auditor.agent);
+    expect(html).to.include("tgentic/audit-report/1");
+    // the signed JSON is embedded (HTML-escaped) for offline verification
+    expect(html).to.include("&quot;type&quot;: &quot;tgentic/audit-report/1&quot;");
+    expect(html).to.include(`&quot;signature&quot;: &quot;${report.signature}&quot;`);
+    // hostile manifest names cannot inject markup
+    const evil = renderReportHtml({ ...report, subject: { ...report.subject, manifest: { name: '<img src=x onerror=alert(1)>' } } });
+    expect(evil).to.not.include("<img src=x");
+    delete ctx.audit;
+  });
+
   it("HTTP: browsers are redirected to the dapp for human-facing routes", async () => {
     ctx.detectFromBlock = 0n;
     const server = srv.createServer(ctx).listen(0);

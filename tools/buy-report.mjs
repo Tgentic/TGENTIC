@@ -19,9 +19,10 @@ const agent = args.find((a) => /^0x[0-9a-fA-F]{40}$/.test(a));
 const key = opt("key", process.env.PAYER_KEY);
 const gate = opt("gate", "https://www.tgentic.xyz");
 const out = opt("out", "");
+const html = args.includes("--html");
 
 if (!agent || !key) {
-  console.error("usage: node tools/buy-report.mjs <agent-address> --key 0xPAYER_KEY [--gate url] [--out file]");
+  console.error("usage: node tools/buy-report.mjs <agent-address> --key 0xPAYER_KEY [--gate url] [--out file] [--html]");
   process.exit(1);
 }
 
@@ -30,16 +31,24 @@ const walletClient = createWalletClient({ account: payer, chain, transport: http
 const tg = createGateClient({ gateUrl: gate });
 
 console.error(`offer ← ${gate}/audit/report?agent=${agent}`);
-const req = await tg.auditOffer(agent);
+const req = await tg.auditOffer(agent, { buyer: payer.address });
 console.error(`  ${req.amount} atomic ${req.asset} → ${req.payTo} (scheme ${req.scheme}, ${req.network})`);
 console.error(`paying with ${payer.address}…`);
 
-const { report, settle } = await tg.buyAudit(agent, walletClient);
+const { report, settle } = await tg.buyAudit(agent, walletClient, undefined, { format: html ? "html" : undefined });
 if (!settle?.success) {
   console.error(`settle failed: ${JSON.stringify(settle)}`);
   process.exit(1);
 }
 console.error(`settled: ${settle.transaction}`);
+
+if (html) {
+  // The HTML file embeds the signed JSON — verify by recovering the signature.
+  const target = out || `audit-report-${agent}.html`;
+  writeFileSync(target, report);
+  console.error(`saved → ${target} (open in a browser — verification instructions inside)`);
+  process.exit(0);
+}
 
 // The report's value is the signature — verify it recovers the auditor
 // before trusting a byte of the body.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatUnits, getAddress, isAddress, parseUnits } from "viem";
 import { api as chainApi } from "./chain.js";
 import { flagsFor, FLAG_TEXT } from "./flags.js";
+import { renderReportHtml } from "../../../sdk/src/report-html.js";
 import { erc8004Of, EXPLORER } from "./erc8004.js";
 import { fetchManifest, fetchManifestMap } from "./manifests.js";
 import { HAS_PRIVY } from "./privy.js";
@@ -277,11 +278,12 @@ function Audit({ a, acct, onConnect }) {
       setBuy({ err: e?.shortMessage ?? e?.message ?? "Purchase failed" });
     }
   };
-  const download = () => {
-    const blob = new Blob([JSON.stringify(buy.report, null, 2)], { type: "application/json" });
+  const download = (format) => {
+    const html = format === "html";
+    const blob = new Blob([html ? renderReportHtml(buy.report, { settleTx: buy.tx }) : JSON.stringify(buy.report, null, 2)], { type: html ? "text/html" : "application/json" });
     const el = document.createElement("a");
     el.href = URL.createObjectURL(blob);
-    el.download = `audit-report-${subject}.json`;
+    el.download = `audit-report-${subject}.${html ? "html" : "json"}`;
     el.click();
     URL.revokeObjectURL(el.href);
   };
@@ -372,7 +374,10 @@ function Audit({ a, acct, onConnect }) {
           <div className="audit-meta">
             <p className="ok-text">Payment settled — report signed by the auditor.</p>
             <p className="hint mono">settle tx: {buy.tx ? <TxLink hash={buy.tx} /> : "—"} · signature {short(buy.report.signature)}</p>
-            <button className="btn btn-line" onClick={download}>Download signed report (JSON)</button>
+            <div className="btns">
+              <button className="btn btn-line" onClick={() => download("html")}>Download report (HTML)</button>
+              <button className="btn btn-line" onClick={() => download("json")}>Download report (JSON)</button>
+            </div>
           </div>
         )}
       </section>

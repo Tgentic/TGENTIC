@@ -1,8 +1,10 @@
 // One place for the token address and public links, shared by the landing page and the dapp.
 // An empty href = not set yet: rendered as "coming soon", not a dead link.
-export const CA = ""; // fill in the token address once it is set
-export const PONS = "";
-export const FOMO = "";
+// NOTE (private repo only): the CA lives here in the deployment repo, not in the public
+// framework repository — keep market/token material out of the public framework.
+export const CA = "0x03b93c1FC6425Ae275e05B670E4f7B62F5a83792";
+export const PONS = "https://ponsfamily.com/launchpad/0x03b93c1fc6425ae275e05b670e4f7b62f5a83792";
+export const FOMO = "https://fomo.family/coin?address=0x03b93c1fc6425ae275e05b670e4f7b62f5a83792&chainId=4663&r=Billy_Butcher&source=share_link&t=1795839545";
 
 // 9x9 pixel glyphs for frameSVG: "1" = main color, "o" = blue accent, "." = empty.
 export const SOCIALS = [

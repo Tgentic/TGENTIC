@@ -101,7 +101,7 @@ export function createGateClient({ gateUrl = DEFAULT_GATE, fetchImpl = fetch } =
      * account explicitly). Returns { report, settle } — settle.transaction is
      * the on-chain payment; report.signature verifies offline against the auditor.
      */
-    async buyAudit(a, walletClient, account = walletClient.account?.address) {
+    async buyAudit(a, walletClient, account = walletClient.account?.address, { format } = {}) {
       if (!account) throw new Error("Pass an account, or a walletClient bound to one.");
       const req = await api.auditOffer(a, { buyer: account }); // the offer prices the buyer's own reputation
       const chainId = Number(req.network.split(":")[1]);
@@ -126,14 +126,14 @@ export function createGateClient({ gateUrl = DEFAULT_GATE, fetchImpl = fetch } =
           validAfter: message.validAfter.toString(), validBefore: message.validBefore.toString(), nonce,
         } },
       };
-      const res = await fetchImpl(`${base}/audit/report?agent=${addr(a)}`, {
-        headers: { accept: "application/json", "payment-signature": b64(JSON.stringify(paymentPayload)) },
+      const res = await fetchImpl(`${base}/audit/report?agent=${addr(a)}${format === "html" ? "&format=html" : ""}`, {
+        headers: { accept: format === "html" ? "text/html" : "application/json", "payment-signature": b64(JSON.stringify(paymentPayload)) },
       });
-      const body = await res.json().catch(() => null);
+      const body = res.headers.get("content-type")?.includes("text/html") ? await res.text() : await res.json().catch(() => null);
       const payRes = res.headers.get("payment-response");
       const settle = payRes ? JSON.parse(unb64(payRes)) : null;
-      if (!res.ok) throw Object.assign(new Error(`audit purchase failed (${res.status}): ${body?.error ?? body?.reason ?? res.statusText}`), { status: res.status, body });
-      return { report: body, settle };
+      if (!res.ok) throw Object.assign(new Error(`audit purchase failed (${res.status}): ${typeof body === "string" ? res.statusText : (body?.error ?? body?.reason ?? res.statusText)}`), { status: res.status, body });
+      return { report: body, settle }; // report is the JSON doc, or the HTML certificate when format=html
     },
 
     /**

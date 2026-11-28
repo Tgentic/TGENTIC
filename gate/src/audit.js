@@ -7,6 +7,7 @@
 import { getAddress, isHex, hexToSignature, parseEventLogs } from "viem";
 import { assessAgent } from "./heuristics.js";
 import { manifestHash, manifestMessage } from "./manifest.js";
+import { renderReportHtml } from "../../sdk/src/report-html.js";
 
 export const REPORT_TYPE = "tgentic/audit-report/1";
 export const USDG_DOMAIN = { name: "Global Dollar", version: "1" };
@@ -270,9 +271,12 @@ export async function handleAudit(ctx, req) {
   }
   if (!settle.success) return { status: 402, headers: {}, body: { error: "settlement_failed", reason: settle.errorReason, transaction: settle.transaction } };
 
+  // The deliverable: JSON for machines, a self-contained HTML certificate when
+  // asked (?format=html or a browser Accept) — same signed fields either way.
+  const wantsHtml = q.get("format") === "html" || req.headers.accept?.includes("text/html");
   return {
     status: 200,
-    headers: { "payment-response": b64(JSON.stringify(settle)) },
-    body: report,
+    headers: { "payment-response": b64(JSON.stringify(settle)), ...(wantsHtml ? { "content-type": "text/html; charset=utf-8" } : {}) },
+    body: wantsHtml ? renderReportHtml(report, { settleTx: settle.transaction }) : report,
   };
 }
