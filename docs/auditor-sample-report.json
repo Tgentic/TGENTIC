@@ -1,0 +1,36 @@
+{
+  "type": "tgentic/audit-report/1",
+  "auditor": {
+    "name": "TGENTIC auditor",
+    "agent": "0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225"
+  },
+  "subject": {
+    "agent": "0x85DB450017B448439dc63a7c566dD9b9E933D2be",
+    "manifest": {
+      "name": "TGENTIC reference agent",
+      "version": 1,
+      "agentId": 26520,
+      "demo": false,
+      "manifestHash": "0x5b3848a66b036c76a0022320db39af26046a6350f4747bb9ff57fdfe4cd68a9f",
+      "verified": true
+    }
+  },
+  "financials": {
+    "score": "1250000",
+    "reputation": "1250000",
+    "receipts": "2",
+    "payers": "2",
+    "bond": "500000",
+    "counted": true
+  },
+  "risk": {
+    "flagged": false,
+    "flags": [],
+    "topPayerShareBps": 5000,
+    "topAmount": "200000",
+    "intervalCount": 1
+  },
+  "summary": "Paid-work record: 2 receipts from 2 unique payers; no manipulation flags.",
+  "issuedAt": "2026-11-28T06:59:58.304Z",
+  "signature": "0xc06773705a3670c7d00cdc71095767ebe609af9005f46f677b9a97f156ada0f064c5d44598cbc78e4ad3e19f18a32a3f75a657a963ebb49cbab800ccacac98761c"
+}
