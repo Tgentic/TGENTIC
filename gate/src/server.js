@@ -27,6 +27,74 @@ const receiptsAbi = [
   { type: "function", name: "bond", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
 ];
 
+/** One marketplace row: contract reads + manipulation flags + manifest identity.
+ *  Shared by GET /agents (the index) and GET /agents/<addr> (the lookup). */
+async function agentRow(ctx, agent, mine) {
+  const read = (fn) => ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: fn, args: [agent] });
+  const [score, reputation, receipts, payers, bond] = await Promise.all(["score", "reputation", "receipts", "payers", "bond"].map(read));
+  const risk = computeFlags(mine, agent);
+  const manifest = ctx.manifests?.byAgent?.get(agent.toLowerCase());
+  return {
+    agent: getAddress(agent),
+    score: score.toString(), reputation: reputation.toString(),
+    receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(),
+    counted: score > 0n, flagged: risk.flagged, flags: risk.flags,
+    ...(manifest ? { name: manifest.name, manifestVerified: true } : {}),
+  };
+}
+
+/** Live Tallied tailer — one chain poller per process, many SSE subscribers.
+ *  Subscribers get the recent buffer as replay, then live events as they land. */
+function makeTailer(ctx) {
+  const recent = [];
+  const subs = new Set();
+  let cursor = null, timer = null, warming = null;
+  const toEvent = (l) => ({
+    type: "tally",
+    agent: getAddress(l.args.agent), payer: getAddress(l.args.payer),
+    amount: l.args.amount.toString(), rating: Number(l.args.rating),
+    txHash: l.args.txHash, blockNumber: l.blockNumber.toString(), tallyTx: l.transactionHash,
+  });
+  const scan = (fromBlock, toBlock) =>
+    ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedEvents, fromBlock, toBlock, blockRange: LOG_BLOCK_RANGE });
+  const emit = (l) => {
+    const ev = toEvent(l);
+    recent.push(ev);
+    if (recent.length > 20) recent.shift();
+    for (const s of subs) s(ev);
+  };
+  async function warm() {
+    const latest = await ctx.publicClient.getBlockNumber();
+    const logs = await scan(ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, latest);
+    for (const l of logs.slice(-20)) { recent.push(toEvent(l)); if (recent.length > 20) recent.shift(); }
+    cursor = latest;
+  }
+  async function tick() {
+    try {
+      const latest = await ctx.publicClient.getBlockNumber();
+      if (cursor === null || latest <= cursor) return;
+      for (const l of await scan(cursor + 1n, latest)) emit(l);
+      cursor = latest;
+    } catch (e) {
+      console.error("events tailer:", e?.shortMessage ?? e?.message ?? e);
+    }
+  }
+  return {
+    full: () => subs.size >= 64,
+    async subscribe(fn) {
+      subs.add(fn);
+      if (cursor === null && !warming) warming = warm().catch((e) => { console.error("events warm:", e?.shortMessage ?? e?.message ?? e); cursor ??= 0n; });
+      await warming;
+      if (!timer) timer = setInterval(tick, ctx.eventPollMs ?? 4000);
+      return recent.slice();
+    },
+    unsubscribe(fn) {
+      subs.delete(fn);
+      if (!subs.size && timer) { clearInterval(timer); timer = null; }
+    },
+  };
+}
+
 const SECURITY_HEADERS = {
   "strict-transport-security": "max-age=31536000",
   "x-frame-options": "DENY",
@@ -68,6 +136,7 @@ function serveStatic(root, url, res) {
  *  ratePerMinute: application-layer request budget per IP (the chain sequences FCFS — no fee market to lean on). */
 export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMinute = 30, mcpRatePerMinute = 120 } = {}) {
   const buckets = new Map(); // ip -> { count, windowStart } — fixed windows, swept on write
+  let tailer = null; // lazily built on the first /events subscriber
   // MCP sessions are multi-call by design (initialize → tools/list → several
   // tools/call), and one indexer may probe the endpoint on behalf of many
   // agents — so /mcp gets its own budget, keyed per ip+path.
@@ -138,6 +207,13 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // One Tallied scan shared across all rows; flags come from the same
     // computeFlags the dapp and SDK use, no extra RPC per agent.
     // Query: ?minScore= ?minReceipts= ?flagged=true|false ?sort=score|receipts|payers ?limit=n
+    // Costly paths get an application-layer request budget — the chain sequences
+    // first-come-first-served, so there is no fee market to lean on. Placed before
+    // the handlers it covers: anything that returns earlier is intentionally free.
+    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents" || pathname.startsWith("/agents/") || pathname === "/audit/report"))) {
+      if (!allow(clientIp(req), ratePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
+    }
+
     if (req.method === "GET" && pathname === "/agents") {
       try {
         const q = new URL(req.url, "https://x").searchParams;
@@ -148,19 +224,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
           if (!byAgent.has(a)) byAgent.set(a, []);
           byAgent.get(a).push({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash });
         }
-        const rows = await Promise.all([...byAgent.entries()].slice(0, 100).map(async ([agent, mine]) => {
-          const read = (fn) => ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: fn, args: [agent] });
-          const [score, reputation, receipts, payers, bond] = await Promise.all(["score", "reputation", "receipts", "payers", "bond"].map(read));
-          const risk = computeFlags(mine, agent);
-          const manifest = ctx.manifests?.byAgent?.get(agent);
-          return {
-            agent: getAddress(agent),
-            score: score.toString(), reputation: reputation.toString(),
-            receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(),
-            counted: score > 0n, flagged: risk.flagged, flags: risk.flags,
-            ...(manifest ? { name: manifest.name, manifestVerified: true } : {}),
-          };
-        }));
+        const rows = await Promise.all([...byAgent.entries()].slice(0, 100).map(([agent, mine]) => agentRow(ctx, agent, mine)));
         const num = (k) => q.get(k);
         if ((num("minScore") && !/^\d+$/.test(num("minScore"))) || (num("minReceipts") && !/^\d+$/.test(num("minReceipts"))))
           return send(400, { error: "BAD_INPUT", message: "minScore and minReceipts must be non-negative integers." });
@@ -179,6 +243,46 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
         console.error("agents failed:", e?.shortMessage ?? e?.message ?? e);
         return send(500, { error: "INTERNAL", message: "The agents read failed." });
       }
+    }
+
+    // The single-agent lookup — the 90% public API call: one curl, one row.
+    // Same shape as a GET /agents entry; an unlisted agent reads as zeros.
+    if (req.method === "GET" && pathname.startsWith("/agents/")) {
+      const raw = decodeURIComponent(pathname.slice("/agents/".length)).trim();
+      if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) return send(400, { error: "BAD_AGENT", message: "Send a 20-byte hex address: /agents/0x…" });
+      const agent = getAddress(raw.toLowerCase());
+      try {
+        const logs = await ctx.publicClient.getLogs({ address: ctx.tgentic, events: talliedEvents, args: { agent }, fromBlock: ctx.detectFromBlock ?? DEFAULT_FROM_BLOCK, blockRange: LOG_BLOCK_RANGE });
+        const mine = logs.map((l) => ({ blockNumber: l.blockNumber, payer: l.args.payer, amount: l.args.amount, txHash: l.args.txHash }));
+        return send(200, await agentRow(ctx, agent, mine));
+      } catch (e) {
+        console.error("agent lookup failed:", e?.shortMessage ?? e?.message ?? e);
+        return send(500, { error: "INTERNAL", message: "The agent lookup failed." });
+      }
+    }
+
+    // Step 7: live reputation stream — Tallied events as they land on chain,
+    // replaying the recent few on connect. One shared poller per process.
+    if (req.method === "GET" && pathname === "/events") {
+      if (!req.headers.accept?.includes("text/event-stream"))
+        return send(200, { name: "tgentic-events", hint: "GET with Accept: text/event-stream — live Tallied events, recent few replayed on connect." });
+      tailer ??= makeTailer(ctx);
+      if (tailer.full()) return send(503, { error: "BUSY", message: "Too many open streams — retry shortly." });
+      res.writeHead(200, {
+        ...SECURITY_HEADERS,
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        "access-control-allow-origin": "*",
+      });
+      res.write(": tgentic-events\n\n");
+      const write = (ev) => { try { res.write(`event: tally\ndata: ${JSON.stringify(ev)}\n\n`); } catch { /* socket already gone */ } };
+      const replay = await tailer.subscribe(write);
+      for (const ev of replay) write(ev);
+      const ka = setInterval(() => { try { res.write(": ka\n\n"); } catch { /* gone */ } }, 15_000);
+      const done = () => { clearInterval(ka); tailer.unsubscribe(write); };
+      req.on("close", done);
+      res.on("close", done);
+      return;
     }
 
     // Streamable HTTP transport's optional SSE channel for server-initiated
@@ -204,13 +308,10 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
       return;
     }
 
-    // Costly paths get an application-layer request budget — the chain sequences
-    // first-come-first-served, so there is no fee market to lean on.
+    // MCP sessions are multi-call by design (initialize → tools/list → several
+    // tools/call), so /mcp POSTs get their own budget, keyed per ip+path.
     if (req.method === "POST" && pathname === "/mcp") {
       if (!allow(`${clientIp(req)}:mcp`, mcpRatePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
-    }
-    if ((req.method === "POST" && pathname === "/tally") || (req.method === "GET" && (pathname === "/risk" || pathname === "/agents" || pathname === "/audit/report"))) {
-      if (!allow(clientIp(req), ratePerMinute)) return send(429, { error: "RATE_LIMITED", message: "Too many requests this minute." });
     }
 
     if (req.method === "GET" && pathname === "/risk") {

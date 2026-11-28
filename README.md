@@ -64,7 +64,7 @@ sdk-python/       tgentic — the same SDK for Python agent frameworks, zero dep
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
 manifests/        signed agent manifests (tgentic/agent-manifest/1), verifiable offline
-test/             contract (11) + gate (18) + policy (9) + heuristics (12) + sdk (9) + manifest (7) + mcp (9) + erc8004-links (2)
+test/             contract + gate + policy + heuristics + sdk + manifest + mcp + erc8004-links
 docs/             design notes — the thinking before the code (time-weighted scoring, ERC-8004 census, agent manifests, security review, ecosystem payments)
 tools/            context.py (one-call project briefing) + immune.py (security scanner) + manifest sign/verify + watch-receipts.py + fuzz sims
 ```
@@ -91,15 +91,27 @@ Run the gate:
 ```bash
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
-npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /manifests, GET /manifest/<addr>, GET /audit/report?agent=0x… (x402-paid, AUDITOR_KEY), POST /tally, POST /mcp (MCP), serves web/dist
+npm start               # :8788 — GET /health, GET /risk?agent=0x…, GET /agents (filter: minScore/minReceipts/flagged/sort/limit), GET /agents/<addr>, GET /manifests, GET /manifest/<addr>, GET /events (SSE, live Tallied), GET /audit/report?agent=0x… (x402-paid, AUDITOR_KEY), POST /tally, POST /mcp (MCP), serves web/dist
 ```
 
 Read an agent's reputation from your own code (the SDK — mainnet by default):
 
 ```js
-import { createClient } from "../sdk/src/index.js"; // published as @tgentic/sdk + viem
+import { createClient, createGateClient } from "../sdk/src/index.js"; // published as @tgentic/sdk + viem
 const tg = createClient();
 const v = await tg.verify("0xAgentAddress"); // score + receipts + manipulation flags, one call
+
+const gate = createGateClient();            // the public HTTP API the dapp uses
+const row = await gate.agent("0xAgentAddress"); // one agent, one curl's worth
+const { report, settle } = await gate.buyAudit("0xAgentAddress", walletClient); // pay → signed report
+```
+
+Buy the signed audit report from the command line (the same flow any agent runs):
+
+```bash
+node tools/buy-report.mjs <agent-address> --key 0xPAYER_KEY --out report.json
+# reads the 402 offer → signs the EIP-3009 authorization → pays → verifies
+# the report signature offline → saves the artifact
 ```
 
 Run the paid agent example:
@@ -135,7 +147,7 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 4. **Integration** — shipped on mainnet: TypeScript + Python SDKs, ERC-8004 registry live (7 agents, 8 payment-proven feedback, indexed on 8004scan), agent directory, MCP endpoint
 5. **Assurance & scale** — v1→v2 cutover done (all reads + policy-gated writes on v2), gas/log-range profiling shipped; next: external security review
 6. **Agent identity** — shipped on mainnet: signed manifests for all 8 operators + 100 demo-labeled (`manifests/`), chain-of-trust key rotation, manifest-bound tallies, `get_agent_identity` + `GET /manifest/<addr>`
-7. **Reputation consumption** — in progress: `GET /agents` marketplace index (filter/rank by counted score + live flags) shipped; first earning agent (auditor) live at #2 on the board — hiring flow proven end-to-end; next: viewing-key access, pricing signals, webhooks
+7. **Reputation consumption** — in progress: `GET /agents` marketplace index + `GET /agents/<addr>` one-call lookup + `GET /events` live score stream shipped; first earning agent (auditor) sells signed audits over x402 at `/audit/report` — hiring flow proven end-to-end (20 receipts); next: viewing-key access, pricing signals
 8. **Portable receipts** — private-by-choice payers, commitment tree + nullifiers, Noir proofs, batched verification
 9. **Disputes & governance** — slash disputes, appeals, community verifier governance
 10. **The standard** — trust-registry interop, agent-to-agent trust negotiation, standards track

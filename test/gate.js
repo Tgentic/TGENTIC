@@ -270,6 +270,79 @@ describe("gate", function () {
     }
   });
 
+  it("HTTP: GET /agents/<addr> returns that agent's row — the one-call lookup", async () => {
+    const txHash = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature: await sign(payerW, txHash, 5) });
+    ctx.detectFromBlock = 0n;
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const res = await fetch(`${base}/agents/${agent.address}`);
+      expect(res.status).to.equal(200);
+      const row = await res.json();
+      expect(row.agent.toLowerCase()).to.equal(agent.address.toLowerCase());
+      expect(row.score).to.equal((AMOUNT * 5n).toString());
+      expect(row.receipts).to.equal("1");
+      expect(row.counted).to.equal(true);
+      expect(row).to.have.property("flagged");
+      // an agent with no record reads as zeros, not an error
+      const empty = await (await fetch(`${base}/agents/${other.address}`)).json();
+      expect(empty.receipts).to.equal("0");
+      expect(empty.flagged).to.equal(false);
+      // bad input is a clean 400 — never a 500
+      expect((await fetch(`${base}/agents/nope`)).status).to.equal(400);
+      expect((await fetch(`${base}/agents/${agent.address.slice(0, 10)}`)).status).to.equal(400);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("HTTP: GET /events replays the buffer then streams live Tallied events", async function () {
+    this.timeout(20_000); // the warm scan reads the whole local chain once
+    ctx.detectFromBlock = 0n;
+    ctx.eventPollMs = 100; // fast ticks — the test cannot wait 4s
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    // a tally before subscribing lands in the replay buffer
+    const first = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash: first, rating: 4, signature: await sign(payerW, first, 4) });
+
+    const res = await fetch(`${base}/events`, { headers: { accept: "text/event-stream" } });
+    expect(res.headers.get("content-type")).to.include("text/event-stream");
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    const readEvent = async () => {
+      for (;;) {
+        const i = buf.indexOf("\n\n");
+        if (i >= 0) { const f = buf.slice(0, i); buf = buf.slice(i + 2); if (f.includes("data:")) return f; continue; }
+        const { done, value } = await reader.read();
+        if (done) throw new Error("stream ended");
+        buf += dec.decode(value, { stream: true });
+      }
+    };
+    try {
+      const replayed = await readEvent();
+      expect(replayed).to.include(first); // the replayed tallyTx
+      // a tally after subscribing arrives live
+      const second = await pay({ to: other.address });
+      await core.handleTally(ctx, { agent: other.address, txHash: second, rating: 5, signature: await sign(payerW, second, 5, other.address) });
+      const live = await readEvent();
+      expect(live).to.include(second);
+      // addresses arrive EIP-55 checksummed — compare case-insensitively
+      expect(live.toLowerCase()).to.include(other.address.toLowerCase());
+      // non-SSE clients get a JSON hint, not a hanging stream
+      const hint = await (await fetch(`${base}/events`)).json();
+      expect(hint.name).to.equal("tgentic-events");
+    } finally {
+      await reader.cancel().catch(() => {});
+      server.closeAllConnections?.();
+      server.close();
+    }
+  });
+
   it("HTTP: GET /audit/report is absent without AUDITOR_KEY, 402-gated when configured", async () => {
     // unconfigured gate: no paid surface
     const off = srv.createServer(ctx).listen(0);
@@ -350,6 +423,25 @@ describe("gate", function () {
     } finally {
       bare.close();
     }
+  });
+
+  it("the signed audit report verifies offline — body minus signature recovers the auditor", async () => {
+    // A field added to the response after signing used to break this invariant.
+    const audit = await import("../gate/src/audit.js");
+    const man = await import("../gate/src/manifest.js");
+    const { recoverMessageAddress } = await import("viem");
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    ctx.detectFromBlock = 0n;
+    ctx.audit = { account: privateKeyToAccount(generatePrivateKey()), settler: null, payTo: agent.address, amount: "10000", name: "test auditor" };
+    const txHash = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash, rating: 4, signature: await sign(payerW, txHash, 4) });
+    const report = await audit.buildAuditReport(ctx, agent.address);
+    expect(report.type).to.equal("tgentic/audit-report/1");
+    expect(report.subject.agent.toLowerCase()).to.equal(agent.address.toLowerCase());
+    expect(report.tgentic.gate).to.be.a("string"); // the buyer-hint field is inside the signed doc
+    const signer = await recoverMessageAddress({ message: man.manifestMessage(report), signature: report.signature });
+    expect(signer.toLowerCase()).to.equal(ctx.audit.account.address.toLowerCase());
+    delete ctx.audit;
   });
 
   it("HTTP: GET /mcp gives browsers the docs page and MCP clients the SSE channel", async () => {

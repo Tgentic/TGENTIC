@@ -90,3 +90,81 @@ export function computeFlags(
   logs: Array<{ blockNumber: bigint; payer: string; amount: bigint; txHash?: string }>,
   agent: string,
 ): RiskResult;
+
+// ---- gate client (the public HTTP surface) ----
+
+export interface AgentRow {
+  agent: string;
+  score: string;
+  reputation: string;
+  receipts: string;
+  payers: string;
+  bond: string;
+  counted: boolean;
+  flagged: boolean;
+  flags: string[];
+  name?: string;
+  manifestVerified?: boolean;
+}
+
+export interface AgentQuery {
+  minScore?: string | number;
+  minReceipts?: string | number;
+  flagged?: boolean;
+  sort?: "score" | "receipts" | "payers";
+  limit?: number;
+}
+
+export interface PaymentRequirements {
+  scheme: string;
+  network: string;
+  asset: string;
+  amount: string;
+  payTo: string;
+  maxTimeoutSeconds?: number;
+  extra?: { name?: string; version?: string };
+}
+
+export interface SettleResult {
+  success: boolean;
+  transaction?: string;
+  network?: string;
+  payer?: string;
+  errorReason?: string;
+}
+
+export interface AuditReport {
+  type: string;
+  auditor: { name: string; agent: string; agentId?: number };
+  subject: { agent: string; manifest: unknown };
+  financials: { score: string; reputation: string; receipts: string; payers: string; bond: string; counted: boolean };
+  risk: { flagged: boolean; flags: string[]; topPayerShareBps: number; topAmount: string; intervalCount: number };
+  summary: string;
+  issuedAt: string;
+  signature: string;
+}
+
+export interface TallyEvent {
+  type: "tally";
+  agent: string;
+  payer: string;
+  amount: string;
+  rating: number;
+  txHash: string;
+  blockNumber: string;
+  tallyTx: string;
+}
+
+export interface GateClient {
+  agents(q?: AgentQuery): Promise<{ agents: AgentRow[]; total: number; source: string }>;
+  agent(a: string): Promise<AgentRow>;
+  risk(a: string): Promise<RiskResult>;
+  manifest(a: string): Promise<unknown>;
+  manifests(): Promise<{ manifests: unknown[] }>;
+  health(): Promise<{ ok: boolean; chainId: number; manifests: number }>;
+  auditOffer(a: string): Promise<PaymentRequirements>;
+  buyAudit(a: string, walletClient: { signTypedData(args: unknown): Promise<string>; account?: { address: string } }, account?: string): Promise<{ report: AuditReport; settle: SettleResult | null }>;
+  events(onTally: (ev: TallyEvent) => void, opts?: { signal?: AbortSignal }): Promise<{ close(): Promise<void> }>;
+}
+
+export function createGateClient(opts?: { gateUrl?: string; fetchImpl?: typeof fetch }): GateClient;

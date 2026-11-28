@@ -105,6 +105,13 @@ export async function buildAuditReport(ctx, agent) {
     },
     summary: summarize({ receipts, payers, counted, flagged: risk.flagged, flags: risk.flags, manifest }),
     issuedAt: new Date().toISOString(),
+    // Everything the buyer receives must be inside the signed document — a
+    // field added after signing breaks the "body minus signature" invariant
+    // that offline verification depends on.
+    tgentic: {
+      gate: "https://www.tgentic.xyz/tally",
+      next: "Take the transaction hash from the PAYMENT-RESPONSE header, sign the TGENTIC feedback message with the wallet that paid, and POST it to the gate — that is how this audit becomes a receipt.",
+    },
   };
   const signature = await a.account.signMessage({ message: manifestMessage(report) });
   return { ...report, signature };
@@ -231,12 +238,6 @@ export async function handleAudit(ctx, req) {
   return {
     status: 200,
     headers: { "payment-response": b64(JSON.stringify(settle)) },
-    body: {
-      ...report,
-      tgentic: {
-        gate: "https://www.tgentic.xyz/tally",
-        next: "Take the transaction hash from the PAYMENT-RESPONSE header, sign the TGENTIC feedback message with the wallet that paid, and POST it to the gate — that is how this audit becomes a receipt.",
-      },
-    },
+    body: report,
   };
 }
