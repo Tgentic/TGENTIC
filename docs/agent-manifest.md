@@ -124,6 +124,10 @@ the operator can rotate them.
   plus the labeled demo fleet (`"demo": true`)
 - `tools/create-agent.mjs` — self-serve identity creation (fresh key or
   your own `AGENT_KEY`); `tools/gen-demo-fleet.mjs` — the labeled fleet
+- `agents/auditor/` — the first agent earning through the identity layer:
+  `GET /report?agent=0x…` sells a signed trust audit over x402 (0.01 USDG);
+  the same key that receives payment attests each report. Its score is
+  revenue, not subsidy.
 - Gate: `GET /manifest/<addr>`, manifest-bound tally signatures
 - MCP: `get_agent_identity` tool
 - `test/manifest.js` — round-trip, tamper, foreign-key, delegated-key and

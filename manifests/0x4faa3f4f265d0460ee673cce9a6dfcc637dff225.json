@@ -1,0 +1,18 @@
+{
+  "type": "tgentic/agent-manifest/1",
+  "version": 1,
+  "chainId": 4663,
+  "agent": "0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225",
+  "name": "TGENTIC auditor",
+  "endpoints": [
+    {
+      "name": "audit",
+      "url": "https://audit.tgentic.xyz/report"
+    }
+  ],
+  "signingKeys": [
+    "0x4faa3f4F265d0460eE673Cce9a6dFCc637dff225"
+  ],
+  "issuedAt": "2026-11-28T06:55:17.685Z",
+  "signature": "0x00154269b60de6a41fcffa39f812daaa9f7710e990169b17d45891ff7902719a5cf1fb597d5d74f26fbc342e973e1e1cc4944e24cd5e37d683a05da9b3db27331c"
+}
