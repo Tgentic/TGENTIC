@@ -78,9 +78,16 @@
       statusEl.textContent = `connected — ${count} receipt${count === 1 ? "" : "s"} shown`;
     }
 
+    let fails = 0;
     const es = new EventSource("/events");
     es.addEventListener("tally", (e) => { try { addRow(JSON.parse(e.data)); } catch {} });
-    es.onerror = () => { statusEl.textContent = "reconnecting…"; };
+    es.onerror = () => {
+      fails++;
+      statusEl.textContent = fails > 3
+        ? "stream unavailable in this browser — see the latest receipts in the dapp →"
+        : "reconnecting…";
+      if (fails > 3) { statusEl.innerHTML = 'stream unavailable here — <a style="color:var(--blue-text,#7d9dd6)" href="/app#/lookup">open the receipt feed in the dapp →</a>'; es.close(); }
+    };
     es.onopen = () => { statusEl.textContent = "connected — waiting for receipts"; };
   </script>
 </body>

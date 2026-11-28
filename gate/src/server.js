@@ -328,6 +328,7 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
         ...SECURITY_HEADERS,
         "content-type": "text/event-stream",
         "cache-control": "no-cache",
+        "x-accel-buffering": "no", // proxies buffer SSE by default — don't let them
         "access-control-allow-origin": "*",
       });
       res.write(": tgentic-events\n\n");
