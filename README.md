@@ -43,20 +43,30 @@ The gate key is the only caller allowed to `tally()` and `slash()`.
 
 Anyone can read the same data with any wallet or RPC — no account, no API key: `score(agent)` is a public view.
 
+## Agent-readable API (MCP)
+
+The gate speaks MCP (Model Context Protocol) at `POST /mcp` — an AI agent can ask for another agent's reputation before paying it. No key, no signup. Live endpoint: `https://www.tgentic.xyz/mcp`.
+
+- `get_agent_score` — counted score, receipts, unique payers, locked bond
+- `get_agent_risk` — manipulation heuristics: payer concentration, timing regularity, amount cycling
+- `resource://tgentic/leaderboard/latest` — bond-gated scores for every agent
+- `audit_agent` prompt — score plus heuristics, one assessment flow
+
 ## Repository layout
 
 ```
 contracts/        TGENTIC.sol (v1: tally + bond + slash), Receipts.sol + Policy.sol (v2: state/policy split, m-of-n verifiers), Heuristics.sol (on-chain manipulation flags), MockToken.sol (tests only)
-gate/             verifier server: checks a USDG tx hash + payer signature, then tallies
+gate/             verifier server: checks a USDG tx hash + payer signature, then tallies; also serves the MCP endpoint
 agent-example/    a paid x402 agent (USDG, chain 4663) using the official @x402/* packages
 web/              landing + dapp (React, viem, Privy login)
 sdk/              @tgentic/sdk — read and verify an agent's score from JS/TS (score, receipts, risk, verify)
 sdk-python/       tgentic — the same SDK for Python agent frameworks, zero dependencies
 scripts/          deploy scripts (mainnet 4663 / testnet 46630) + a full testnet demo flow
 deployments/      addresses written by the deploy scripts
-test/             contract tests (11) + gate tests (11) + policy tests (9) + heuristics tests (10) + sdk tests (8)
-docs/             design notes — the thinking before the code (time-weighted scoring, …)
-tools/            context.py (one-call project briefing) + immune.py (security scanner)
+manifests/        signed agent manifests (tgentic/agent-manifest/1), verifiable offline
+test/             contract (11) + gate (17) + policy (9) + heuristics (12) + sdk (9) + manifest (7) + mcp (9) + erc8004-links (2)
+docs/             design notes — the thinking before the code (time-weighted scoring, ERC-8004 census, agent manifests, security review, ecosystem payments)
+tools/            context.py (one-call project briefing) + immune.py (security scanner) + manifest sign/verify + watch-receipts.py + fuzz sims
 ```
 
 ## Quickstart
@@ -65,7 +75,7 @@ Needs Node.js 20 or later.
 
 ```bash
 npm install
-npm test                    # 49 tests: contract + gate + policy + heuristics + sdk on a local Hardhat network
+npm test                    # 76 tests: contract + gate + policy + heuristics + sdk + manifest + mcp on a local Hardhat network
 ```
 
 Run the dapp against a local node:
@@ -81,7 +91,7 @@ Run the gate:
 ```bash
 cd gate
 cp .env.example .env    # fill in GATE_PRIVATE_KEY, TGENTIC_ADDRESS, FACILITATORS
-npm start               # :8788 — GET /health, GET /risk?agent=0x…, POST /tally, serves web/dist
+npm start               # :8788 — GET /health, GET /risk?agent=0x…, POST /tally, POST /mcp (MCP), serves web/dist
 ```
 
 Read an agent's reputation from your own code (the SDK — mainnet by default):
@@ -122,9 +132,9 @@ Ten steps, one at a time, each closing a declared limit or opening the framework
 1. **Foundation** — shipped (v1.0.1)
 2. **Decentralized trust** — shipped on mainnet: state/policy split, 2-of-3 verifiers, evidence-based slashing
 3. **Manipulation resistance** — shipped on mainnet: on-chain flags (Heuristics 0xe9D4eaa0…), event-based detection at /risk, rate limiting, dapp signals
-4. **Integration** — shipped on mainnet: TypeScript + Python SDKs, ERC-8004 registry live (7 agents, 8 payment-proven feedback), agent directory
+4. **Integration** — shipped on mainnet: TypeScript + Python SDKs, ERC-8004 registry live (7 agents, 8 payment-proven feedback, indexed on 8004scan), agent directory, MCP endpoint
 5. **Assurance & scale** — v1→v2 cutover done (all reads + policy-gated writes on v2), gas/log-range profiling shipped; next: external security review
-6. **Agent identity** — signed agent manifests, identity-to-score resolution, key rotation
+6. **Agent identity** — in progress: signed manifests live for all 7 agents (`manifests/`, verify offline via `tools/verify-manifest.mjs`); next: identity-to-score resolution, key rotation
 7. **Reputation consumption** — marketplace APIs, hiring flow, viewing-key access, pricing signals
 8. **Portable receipts** — private-by-choice payers, commitment tree + nullifiers, Noir proofs, batched verification
 9. **Disputes & governance** — slash disputes, appeals, community verifier governance
