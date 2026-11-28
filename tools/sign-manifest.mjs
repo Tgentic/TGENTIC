@@ -2,6 +2,11 @@
 // this script never writes them anywhere. Usage:
 //   AGENT_KEY=0x… node tools/sign-manifest.mjs --agent 0x… --name "…" \
 //     [--agent-id 26520] [--endpoint web=https://…] [--key 0x…] [--out manifests/0x….json]
+//     [--version <n>] [--signer 0x<delegated-key>]
+//
+// Rotation: bump --version and sign with a key the previous manifest
+// authorized. The self-sign check is skipped when --signer delegates to a
+// different key — AGENT_KEY then belongs to that delegated key, not `agent`.
 import { writeFileSync } from "node:fs";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -22,8 +27,18 @@ if (!key || !agent || !name) {
   process.exit(1);
 }
 const account = privateKeyToAccount(key);
-if (account.address.toLowerCase() !== agent.toLowerCase()) {
+const signer = opt("signer") ?? account.address;
+const delegated = signer.toLowerCase() !== agent.toLowerCase();
+// Self-signed manifests must be signed by the agent key itself. Delegated
+// manifests (rotation: --signer names a new authorized key) are signed by
+// whatever AGENT_KEY resolves to — the chain check in resolveManifests()
+// decides whether that key was actually authorized.
+if (!delegated && account.address.toLowerCase() !== agent.toLowerCase()) {
   console.error(`AGENT_KEY resolves to ${account.address}, not ${agent} — refusing to sign a mismatched manifest`);
+  process.exit(1);
+}
+if (delegated && account.address.toLowerCase() !== signer.toLowerCase()) {
+  console.error(`--signer ${signer} does not match AGENT_KEY address ${account.address}`);
   process.exit(1);
 }
 const endpoints = opts("endpoint").map((e) => {
@@ -40,6 +55,7 @@ const manifest = newManifest({
   name,
   endpoints,
   signingKeys,
+  version: opt("version") !== undefined ? Number(opt("version")) : undefined,
 });
 const client = createWalletClient({ account, transport: http("https://rpc.mainnet.chain.robinhood.com") });
 const signed = await signManifest(client, manifest);

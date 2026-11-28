@@ -86,6 +86,56 @@ describe("gate", function () {
     expect(await code(core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature: sig }))).to.equal("BAD_SIGNATURE");
   });
 
+  it("identity-bound tally: payer signature commits to the manifest hash", async () => {
+    const mf = await import("../gate/src/manifest.js");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    const manifest = await mf.signManifest(mk(agent.address).walletClient, mf.newManifest({
+      chainId: ctx.chainId, agent: agent.address, name: "bound agent",
+      endpoints: [{ name: "web", url: "https://example.com" }],
+    }));
+    ctx.manifests = { byAgent: new Map([[agent.address.toLowerCase(), manifest]]) };
+    const hash = mf.manifestHash(manifest);
+    const txHash = await pay();
+    const signature = await payerW.signMessage({ message: core.feedbackMessage({ chainId: ctx.chainId, agent: agent.address, txHash, rating: 5, manifestHash: hash }) });
+    const res = await core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature, manifest });
+    expect(res.manifestHash).to.equal(hash);
+    expect(await tm.reputation(agent.address)).to.equal(AMOUNT * 5n);
+  });
+
+  it("rejects a manifest-bound tally when the signature did not bind it", async () => {
+    const mf = await import("../gate/src/manifest.js");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    const manifest = await mf.signManifest(mk(agent.address).walletClient, mf.newManifest({
+      chainId: ctx.chainId, agent: agent.address, name: "bound agent", endpoints: [],
+    }));
+    const txHash = await pay();
+    const signature = await sign(payerW, txHash, 5); // signed WITHOUT the manifest line
+    expect(await code(core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature, manifest }))).to.equal("BAD_SIGNATURE");
+  });
+
+  it("rejects a manifest naming a different agent", async () => {
+    const mf = await import("../gate/src/manifest.js");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    const manifest = await mf.signManifest(mk(other.address).walletClient, mf.newManifest({
+      chainId: ctx.chainId, agent: other.address, name: "wrong agent", endpoints: [],
+    }));
+    const txHash = await pay();
+    const signature = await sign(payerW, txHash, 5);
+    expect(await code(core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature, manifest }))).to.equal("MANIFEST_MISMATCH");
+  });
+
+  it("rejects binding to a superseded manifest version", async () => {
+    const mf = await import("../gate/src/manifest.js");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    const w = mk(agent.address).walletClient;
+    const v1 = await mf.signManifest(w, mf.newManifest({ chainId: ctx.chainId, agent: agent.address, name: "a", endpoints: [], version: 1 }));
+    const v2 = await mf.signManifest(w, mf.newManifest({ chainId: ctx.chainId, agent: agent.address, name: "a", endpoints: [], version: 2 }));
+    ctx.manifests = { byAgent: new Map([[agent.address.toLowerCase(), v2]]) };
+    const txHash = await pay();
+    const signature = await payerW.signMessage({ message: core.feedbackMessage({ chainId: ctx.chainId, agent: agent.address, txHash, rating: 5, manifestHash: mf.manifestHash(v1) }) });
+    expect(await code(core.handleTally(ctx, { agent: agent.address, txHash, rating: 5, signature, manifest: v1 }))).to.equal("MANIFEST_STALE");
+  });
+
   it("waits for enough confirmations", async () => {
     ctx.minConfirmations = 3;
     const txHash = await pay();
@@ -150,6 +200,27 @@ describe("gate", function () {
       const r2 = await post(JSON.stringify({ agent: agent.address, txHash, rating: 2, signature: await sign(payerW, txHash, 2) }));
       expect(r2.status).to.equal(200);
       expect((await r2.json()).amount).to.equal(AMOUNT.toString());
+    } finally {
+      server.close();
+    }
+  });
+
+  it("HTTP: GET /manifest/<addr> serves the verified manifest, 404 otherwise", async () => {
+    const mf = await import("../gate/src/manifest.js");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    const manifest = await mf.signManifest(mk(agent.address).walletClient, mf.newManifest({
+      chainId: ctx.chainId, agent: agent.address, name: "served agent", endpoints: [],
+    }));
+    ctx.manifests = { byAgent: new Map([[agent.address.toLowerCase(), manifest]]) };
+    const server = srv.createServer(ctx).listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const ok = await fetch(`${base}/manifest/${agent.address}`);
+      expect(ok.status).to.equal(200);
+      expect((await ok.json()).name).to.equal("served agent");
+      expect((await fetch(`${base}/manifest/${other.address}`)).status).to.equal(404);
+      expect((await fetch(`${base}/manifest/not-an-address`)).status).to.equal(404);
     } finally {
       server.close();
     }

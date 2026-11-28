@@ -2,6 +2,7 @@
 import { getAddress, isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { makeClients, policyAbi } from "./core.js";
+import { loadManifestStore } from "./manifest.js";
 import { createServer } from "./server.js";
 
 try { process.loadEnvFile(".env"); } catch {} // optional .env in the gate dir; missing values get a clear error below
@@ -65,6 +66,10 @@ const ctx = {
   minConfirmations: Number(env.MIN_CONFIRMATIONS ?? 3),
   detectFromBlock: BigInt(env.DETECT_FROM_BLOCK ?? 122_282_476), // v2 Receipts deploy block
   inflight: new Set(),
+  // Step 6: verified manifests loaded once from MANIFESTS_DIR (repo manifests/
+  // by default). resolveManifests() drops everything after a gap or an
+  // unauthorized signer, so what lands here is the trusted tip only.
+  manifests: loadManifestStore(env.MANIFESTS_DIR ?? new URL("../../manifests/", import.meta.url).pathname),
 };
 
 const port = Number(env.PORT ?? 8788); // 8787 left reserved

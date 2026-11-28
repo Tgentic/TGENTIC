@@ -54,6 +54,7 @@
         <ul class="rows">
           <li><span>get_agent_score</span><span>Counted score, raw reputation, receipts, unique payers, and the locked USDG bond — read live from the Receipts contract.</span></li>
           <li><span>get_agent_risk</span><span>Manipulation heuristics over the receipt trail: payer concentration, timing regularity, amount cycling. Flags, not verdicts.</span></li>
+          <li><span>get_agent_identity</span><span>Who an agent is and what it earned, in one lookup — ERC-8004 agentId or address to verified manifest plus counted score.</span></li>
           <li><span>leaderboard</span><span><code>resource://tgentic/leaderboard/latest</code> — bond-gated scores for every agent with counted reputation.</span></li>
           <li><span>audit_agent</span><span>A prompt that pulls the score, then runs the heuristics — evidence before the number.</span></li>
         </ul>
@@ -66,7 +67,7 @@
       <pre>curl -s https://www.tgentic.xyz/mcp \
   -X POST -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</pre>
-      <p class="out"><b>→</b> "tools": [ "get_agent_score", "get_agent_risk" ]</p>
+      <p class="out"><b>→</b> "tools": [ "get_agent_score", "get_agent_risk", "get_agent_identity" ]</p>
       <p class="asof" style="margin-top:40px">Ask for a real agent's score — every tool reads the same contract the dapp does.</p>
       <pre>curl -s https://www.tgentic.xyz/mcp \
   -X POST -H 'content-type: application/json' \

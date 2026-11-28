@@ -5,6 +5,11 @@
 
 import { getAddress, isAddress, parseAbi } from "viem";
 import { assessAgent, DEFAULT_FROM_BLOCK, LOG_BLOCK_RANGE } from "./heuristics.js";
+import { manifestHash } from "./manifest.js";
+
+// Official ERC-8004 IdentityRegistry on 4663 — resolves agentId → owner address.
+const IDENTITY_REGISTRY = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432";
+const identityAbi = parseAbi(["function ownerOf(uint256 tokenId) view returns (address)"]);
 
 const receiptsAbi = parseAbi([
   "function score(address) view returns (uint256)",
@@ -36,6 +41,17 @@ const TOOLS = [
       required: ["agent"],
     },
   },
+  {
+    name: "get_agent_identity",
+    description: "Resolve who an agent is to what it earned, in one lookup: ERC-8004 agentId or address → verified manifest (name, endpoints, signing keys) plus counted score, receipts, payers and bond.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent: { type: "string", description: "0x agent address" },
+        agentId: { type: "integer", description: "ERC-8004 tokenId — resolved via the IdentityRegistry" },
+      },
+    },
+  },
 ];
 
 const RESOURCES = [
@@ -58,6 +74,29 @@ const PROMPTS = [
 const validAgent = (a) => typeof a === "string" && isAddress(a);
 
 async function callTool(ctx, name, args = {}) {
+  if (name === "get_agent_identity") {
+    // agentId → registry ownerOf; agent → direct. Either way the answer is
+    // one object: who this is (verified manifest, when published) and what
+    // it earned (the same contract read as get_agent_score).
+    let agent;
+    if (validAgent(args.agent)) agent = getAddress(args.agent.toLowerCase());
+    else if (Number.isInteger(args.agentId)) {
+      try {
+        agent = getAddress((await ctx.publicClient.readContract({ address: ctx.identityRegistry ?? IDENTITY_REGISTRY, abi: identityAbi, functionName: "ownerOf", args: [BigInt(args.agentId)] })).toLowerCase());
+      } catch { throw new Error(`agentId ${args.agentId} is not registered on the identity registry`); }
+    } else throw new Error("send agent (0x address) or agentId (integer)");
+    const read = (fn) => ctx.publicClient.readContract({ address: ctx.tgentic, abi: receiptsAbi, functionName: fn, args: [agent] });
+    const [score, bond, receipts, payers, reputation] = await Promise.all(
+      ["score", "bond", "receipts", "payers", "reputation"].map(read),
+    );
+    const m = ctx.manifests?.byAgent.get(agent.toLowerCase()) ?? null;
+    return {
+      agent,
+      agentId: m?.agentId ?? (Number.isInteger(args.agentId) ? args.agentId : null),
+      manifest: m ? { name: m.name, version: m.version, endpoints: m.endpoints, signingKeys: m.signingKeys, issuedAt: m.issuedAt, manifestHash: manifestHash(m), verified: true } : null,
+      score: score.toString(), reputation: reputation.toString(), receipts: receipts.toString(), payers: payers.toString(), bond: bond.toString(), counted: score > 0n,
+    };
+  }
   if (!validAgent(args.agent)) throw new Error("agent must be a 0x address");
   const agent = getAddress(args.agent.toLowerCase());
   if (name === "get_agent_score") {

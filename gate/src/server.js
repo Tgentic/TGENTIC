@@ -87,6 +87,13 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
 
     if (req.method === "OPTIONS") return send(204);
     if (req.method === "GET" && pathname === "/health") return send(200, { ok: true, chainId: ctx.chainId });
+    // Step 6: serve the current verified manifest for an agent — plain HTTP
+    // identity lookup, same store the MCP get_agent_identity tool reads.
+    if (req.method === "GET" && pathname.startsWith("/manifest/")) {
+      const addr = pathname.slice("/manifest/".length).replace(/\.json$/i, "").toLowerCase();
+      const m = /^0x[0-9a-f]{40}$/.test(addr) ? ctx.manifests?.byAgent.get(addr) : null;
+      return m ? send(200, m) : send(404, { error: "NO_MANIFEST", message: "No verified manifest for this agent." });
+    }
 
     // Streamable HTTP transport's optional SSE channel for server-initiated
     // messages. We never push, and we close promptly — health probes fetch GET

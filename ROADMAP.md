@@ -78,14 +78,14 @@ ourself, and it stays honest at scale. Everything above except the
 external review is done — that last item cannot be completed from the
 inside.
 
-## Step 6 — Agent identity (in progress)
+## Step 6 — Agent identity (shipped on mainnet)
 
 A score is only useful if it binds to the agent you are actually talking to.
 
 - [x] Signed agent manifests: name, endpoints, signing keys, versioned — `tgentic/agent-manifest/1` spec (docs/agent-manifest.md), sign/verify in `gate/src/manifest.js`, signed manifests for all 7 mainnet agents committed under `manifests/` and verifiable offline via `tools/verify-manifest.mjs`
-- [ ] Resolve agent identity → on-chain score in one lookup
-- [ ] Key rotation without losing the tally history
-- [ ] Identity-verified payments: the receipt binds to the manifest, not just an address
+- [x] Resolve agent identity → on-chain score in one lookup — MCP tool `get_agent_identity` accepts an ERC-8004 `agentId` (resolved through the IdentityRegistry) or an address and returns the verified manifest plus live score; `GET /manifest/<addr>` serves the same store over plain HTTP
+- [x] Key rotation without losing the tally history — `resolveManifests()` walks each agent's versions as a trust chain: every new version must be signed by a key the previous accepted version authorized; an unauthorized signer cannot rewrite the tip, and the agent key stays the recovery path
+- [x] Identity-verified payments: the receipt binds to the manifest, not just an address — `/tally` accepts an optional `manifest`; the payer's signature must then also bind `manifestHash`, and binding to a superseded version is rejected
 
 **Done means:** "which agent earned this score" has a verifiable answer.
 

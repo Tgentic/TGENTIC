@@ -74,6 +74,48 @@ describe("mcp", function () {
     expect(out.agent.toLowerCase()).to.equal(agent.address.toLowerCase());
   });
 
+  it("get_agent_identity joins verified manifest + live score in one lookup", async () => {
+    await tally(5);
+    const mf = await import("../gate/src/manifest.js");
+    const mk = (account) => core.makeClients({ chainId: ctx.chainId, provider: network.provider, account });
+    const signed = await mf.signManifest(mk(agent.address).walletClient, mf.newManifest({
+      chainId: ctx.chainId, agent: agent.address, agentId: 26520,
+      name: "test agent", endpoints: [{ name: "web", url: "https://example.com" }],
+    }));
+    ctx.manifests = { byAgent: new Map([[agent.address.toLowerCase(), signed]]) };
+    const res = await mcp.handleMcp(ctx, {
+      jsonrpc: "2.0", id: 20, method: "tools/call",
+      params: { name: "get_agent_identity", arguments: { agent: agent.address } },
+    });
+    const out = res.body.result.structuredContent;
+    expect(out.agent).to.equal(agent.address);
+    expect(out.agentId).to.equal(26520);
+    expect(out.manifest.name).to.equal("test agent");
+    expect(out.manifest.verified).to.equal(true);
+    expect(out.manifest.manifestHash).to.equal(mf.manifestHash(signed));
+    expect(out.score).to.equal((AMOUNT * 5n).toString());
+    expect(out.receipts).to.equal("1");
+  });
+
+  it("get_agent_identity works without a manifest — identity is null, score still real", async () => {
+    await tally(3);
+    const res = await mcp.handleMcp(ctx, {
+      jsonrpc: "2.0", id: 21, method: "tools/call",
+      params: { name: "get_agent_identity", arguments: { agent: agent.address } },
+    });
+    const out = res.body.result.structuredContent;
+    expect(out.manifest).to.equal(null);
+    expect(out.score).to.equal((AMOUNT * 3n).toString());
+  });
+
+  it("get_agent_identity requires agent or agentId", async () => {
+    const res = await mcp.handleMcp(ctx, {
+      jsonrpc: "2.0", id: 22, method: "tools/call",
+      params: { name: "get_agent_identity", arguments: {} },
+    });
+    expect(res.body.error.code).to.equal(-32602);
+  });
+
   it("rejects a bad agent address", async () => {
     const res = await mcp.handleMcp(ctx, {
       jsonrpc: "2.0", id: 5, method: "tools/call",

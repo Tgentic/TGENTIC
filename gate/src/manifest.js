@@ -7,7 +7,9 @@
 // personal_sign over its canonical form (every field except `signature`,
 // keys sorted). Anyone can verify it offline — no gate trust required.
 
-import { recoverMessageAddress } from "viem";
+import { keccak256, recoverMessageAddress, toBytes } from "viem";
+import fs from "node:fs";
+import path from "node:path";
 
 export const MANIFEST_TYPE = "tgentic/agent-manifest/1";
 
@@ -55,9 +57,9 @@ export function validateManifest(m) {
 }
 
 /** Build an unsigned manifest. Caller adds the signature via signManifest. */
-export const newManifest = ({ chainId, agent, agentId, name, endpoints = [], signingKeys, issuedAt }) => ({
+export const newManifest = ({ chainId, agent, agentId, name, endpoints = [], signingKeys, issuedAt, version = 1 }) => ({
   type: MANIFEST_TYPE,
-  version: 1,
+  version,
   chainId,
   agent,
   ...(agentId !== undefined ? { agentId } : {}),
@@ -95,4 +97,83 @@ export async function verifyManifest(m) {
   return candidates.includes(signer)
     ? { ok: true, signer, errors: [] }
     : { ok: false, errors: ["signature not from agent or a declared signingKey"] };
+}
+
+/** keccak256 over the canonical manifest — the handle a receipt can bind to. */
+export const manifestHash = (m) => keccak256(toBytes(manifestMessage(m)));
+
+const authorizedKeys = (m) => [m.agent, ...(m.signingKeys ?? [])].map((a) => a.toLowerCase());
+
+/**
+ * Resolve the current manifest from every version claimed for one agent —
+ * the consumer-side convention that makes key rotation real.
+ *
+ * Chain of trust: the first valid version must be signed by `agent` or one
+ * of its own declared keys. Each later version must be signed by a key the
+ * previously accepted version authorized — "the old key signs in the new
+ * key". A version signed by an unauthorized key does not extend the chain;
+ * the tally history stays with the earlier accepted version.
+ *
+ * @returns {Promise<{current: object|null, chain: object[], errors: string[]}>}
+ */
+export async function resolveManifests(list) {
+  const sorted = [...(list ?? [])].filter(Boolean).sort((a, b) => (a.version ?? 0) - (b.version ?? 0));
+  const chain = [];
+  const errors = [];
+  let authorized = null;
+  let current = null;
+  for (const m of sorted) {
+    const v = await verifyManifest(m);
+    const at = `v${m?.version ?? "?"}`;
+    if (!v.ok) {
+      chain.push({ version: m?.version, ok: false });
+      errors.push(...v.errors.map((e) => `${at}: ${e}`));
+      continue;
+    }
+    if (current && m.agent.toLowerCase() !== current.agent.toLowerCase()) {
+      chain.push({ version: m.version, ok: false });
+      errors.push(`${at}: different agent ${m.agent}`);
+      continue;
+    }
+    const keys = authorized ?? authorizedKeys(m);
+    if (!keys.includes(v.signer)) {
+      chain.push({ version: m.version, ok: false });
+      errors.push(`${at}: signer ${v.signer} not authorized by the previous version`);
+      continue;
+    }
+    authorized = authorizedKeys(m);
+    current = m;
+    chain.push({ version: m.version, signer: v.signer, ok: true });
+  }
+  return { current, chain, errors };
+}
+
+/**
+ * Load every manifest in a directory into lookup maps — byAgent (lowercase
+ * address → current manifest), byAgentId (ERC-8004 tokenId → manifest),
+ * versions (address → all valid+invalid versions seen). Invalid files are
+ * skipped into `rejected`, never thrown — a bad manifest must not stop boot.
+ */
+export async function loadManifestStore(dir) {
+  const byAgent = new Map(), byAgentId = new Map(), versions = new Map(), rejected = [];
+  if (dir && fs.existsSync(dir)) {
+    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
+      let m;
+      try { m = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")); }
+      catch { rejected.push({ file: f, errors: ["invalid JSON"] }); continue; }
+      const v = await verifyManifest(m);
+      if (!v.ok) { rejected.push({ file: f, errors: v.errors }); continue; }
+      const agent = m.agent.toLowerCase();
+      if (!versions.has(agent)) versions.set(agent, []);
+      versions.get(agent).push(m);
+    }
+  }
+  for (const [agent, list] of versions) {
+    const { current } = await resolveManifests(list);
+    if (current) {
+      byAgent.set(agent, current);
+      if (current.agentId !== undefined) byAgentId.set(current.agentId, current);
+    }
+  }
+  return { byAgent, byAgentId, versions, rejected };
 }
