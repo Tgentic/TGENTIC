@@ -546,6 +546,50 @@ describe("gate", function () {
     delete ctx.audit;
   });
 
+  it("a failed settle returns 402 with a spec-shaped PAYMENT-RESPONSE header", async () => {
+    const audit = await import("../gate/src/audit.js");
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    ctx.detectFromBlock = 0n;
+    ctx.audit = {
+      account: privateKeyToAccount(generatePrivateKey()),
+      settler: { writeContract: async () => { throw new Error("execution reverted"); } },
+      payTo: agent.address, amount: "10000", name: "test auditor",
+    };
+    const txHash = await pay();
+    await core.handleTally(ctx, { agent: agent.address, txHash, rating: 4, signature: await sign(payerW, txHash, 4) });
+    // verify passes; settle throws — the header must still carry the settlement result
+    const realClient = ctx.publicClient;
+    // Only the EIP-3009 reads are fake (MockToken has no authorizationState);
+    // everything else — score, bond, manifest reads — uses the real client.
+    ctx.publicClient = {
+      ...realClient,
+      verifyTypedData: async () => true,
+      readContract: async (args) =>
+        args.address?.toLowerCase() === ctx.usdg.toLowerCase()
+          ? (args.functionName === "authorizationState" ? false : 10n ** 18n)
+          : realClient.readContract(args),
+    };
+    const payload = {
+      x402Version: 2,
+      accepted: { scheme: "exact", network: `eip155:${ctx.chainId}`, asset: ctx.usdg },
+      payload: {
+        signature: "0x" + "11".repeat(65),
+        authorization: { from: payer.address, to: agent.address, value: "10000", validAfter: "0", validBefore: "9999999999", nonce: "0x" + "22".repeat(32) },
+      },
+    };
+    const res = await audit.handleAudit(ctx, {
+      url: `/audit/report?agent=${agent.address}`,
+      headers: { "payment-signature": Buffer.from(JSON.stringify(payload)).toString("base64") },
+    });
+    ctx.publicClient = realClient;
+    delete ctx.audit;
+    expect(res.status).to.equal(402);
+    const settle = JSON.parse(Buffer.from(res.headers["payment-response"], "base64").toString());
+    expect(settle.success).to.equal(false);
+    expect(settle.errorReason).to.equal("settlement_failed");
+    expect(settle.network).to.equal(`eip155:${ctx.chainId}`);
+  });
+
   it("HTTP: browsers are redirected to the dapp for human-facing routes", async () => {
     ctx.detectFromBlock = 0n;
     const server = srv.createServer(ctx).listen(0);

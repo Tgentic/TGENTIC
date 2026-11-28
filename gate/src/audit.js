@@ -267,9 +267,10 @@ export async function handleAudit(ctx, req) {
   try { settle = await settlePayment(ctx, payload); }
   catch (e) {
     console.error("audit settle failed:", e?.shortMessage ?? e?.message ?? e);
-    return { status: 402, headers: {}, body: { error: "settlement_failed" } };
+    settle = { success: false, errorReason: "settlement_failed", transaction: "", network: `eip155:${ctx.chainId}` };
   }
-  if (!settle.success) return { status: 402, headers: {}, body: { error: "settlement_failed", reason: settle.errorReason, transaction: settle.transaction } };
+  if (!settle.success)
+    return { status: 402, headers: { "payment-response": b64(JSON.stringify(settle)) }, body: { error: "settlement_failed", reason: settle.errorReason, transaction: settle.transaction } };
 
   // The deliverable: JSON for machines, a self-contained HTML certificate when
   // asked (?format=html or a browser Accept) — same signed fields either way.
