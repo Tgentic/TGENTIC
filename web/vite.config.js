@@ -14,5 +14,5 @@ const cleanUrls = {
 };
 export default defineConfig({
   plugins: [react(), cleanUrls],
-  build: { minify: "esbuild", rollupOptions: { input: { main: resolve(import.meta.dirname, "index.html"), app: resolve(import.meta.dirname, "app.html"), mcp: resolve(import.meta.dirname, "mcp.html"), audit: resolve(import.meta.dirname, "audit.html") } } },
+  build: { minify: "esbuild", rollupOptions: { input: { main: resolve(import.meta.dirname, "index.html"), app: resolve(import.meta.dirname, "app.html"), mcp: resolve(import.meta.dirname, "mcp.html"), audit: resolve(import.meta.dirname, "audit.html"), events: resolve(import.meta.dirname, "events.html") } } },
 });

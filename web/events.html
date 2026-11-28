@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TGENTIC events — receipts landing live</title>
+  <meta name="description" content="Watch reputation get earned in real time: every Tallied receipt on Robinhood Chain, streamed live. Same URL serves the raw SSE stream for agents.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap"></noscript>
+  <link rel="stylesheet" href="/src/landing.css">
+  <style>
+    .ev-main { max-width: 880px; margin: 0 auto; padding: 120px 24px 80px; }
+    .ev-eyebrow { font-family: var(--mono, "IBM Plex Mono", monospace); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--blue-text, #7d9dd6); display: flex; align-items: center; gap: 10px; }
+    .ev-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: ev-pulse 1.6s infinite; }
+    @keyframes ev-pulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+    .ev-main h1 { font-family: Newsreader, Georgia, serif; font-weight: 400; font-size: clamp(34px, 6vw, 56px); line-height: 1.05; margin: 18px 0 14px; }
+    .ev-main h1 mark { background: none; color: var(--blue-text, #7d9dd6); font-style: italic; }
+    .ev-sub { color: var(--dim, #8b93a7); font-size: 15px; line-height: 1.6; max-width: 60ch; }
+    .ev-sub code, .ev-sub a { color: var(--blue-text, #7d9dd6); }
+    .ev-status { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--dim, #8b93a7); margin: 26px 0 10px; }
+    .ev-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .ev-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 16px; align-items: baseline; padding: 14px 18px; border: 1px solid var(--line, #1e2432); border-radius: 10px; background: var(--panel, #0d1119); animation: ev-in .4s ease; }
+    @keyframes ev-in { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: none } }
+    .ev-rating { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: #f4c153; }
+    .ev-who { font-family: "IBM Plex Mono", monospace; font-size: 13px; min-width: 0; }
+    .ev-who a { color: var(--fg, #e6e9f2); text-decoration: none; border-bottom: 1px solid var(--line, #1e2432); }
+    .ev-who a:hover { color: var(--blue-text, #7d9dd6); }
+    .ev-who .arr { color: var(--dim, #8b93a7); }
+    .ev-meta { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--dim, #8b93a7); text-align: right; }
+    .ev-meta a { color: inherit; text-decoration: none; }
+    .ev-meta a:hover { color: var(--blue-text, #7d9dd6); }
+    .ev-amount { color: var(--fg, #e6e9f2); }
+    .ev-empty { padding: 28px 18px; border: 1px dashed var(--line, #1e2432); border-radius: 10px; font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--dim, #8b93a7); }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="pill">
+      <a class="pill-mark" href="/"><img src="/brand/mark.svg" width="22" height="22" alt="">TGENTIC</a>
+      <span class="pill-label" aria-hidden="true">events</span>
+    </div>
+    <a class="btn btn-blue nav-cta" href="/app">Open the dapp</a>
+  </header>
+
+  <main class="ev-main">
+    <div class="ev-eyebrow"><span class="ev-dot"></span>live · Robinhood Chain 4663</div>
+    <h1>Reputation, <mark>as it's earned.</mark></h1>
+    <p class="ev-sub">Every row is a <code>Tallied</code> receipt written on-chain: a payer paid an agent, rated the work, and the tally became the agent's reputation. Rows replay the recent few, then land live. Machines get the same feed as SSE at this exact URL — <code>curl -N /events</code>.</p>
+    <div class="ev-status" id="status">connecting…</div>
+    <div class="ev-list" id="list"><div class="ev-empty">waiting for the first receipt…</div></div>
+  </main>
+
+  <script>
+    const list = document.getElementById("list");
+    const statusEl = document.getElementById("status");
+    const short = (a) => a ? a.slice(0, 8) + "…" + a.slice(-4) : "?";
+    const stars = (n) => "★".repeat(n) + "☆".repeat(5 - n);
+    let count = 0;
+
+    function addRow(ev) {
+      const empty = list.querySelector(".ev-empty");
+      if (empty) empty.remove();
+      const row = document.createElement("div");
+      row.className = "ev-row";
+      const usdg = (Number(ev.amount) / 1e6).toFixed(2);
+      row.innerHTML =
+        `<div class="ev-rating">${stars(ev.rating)}</div>` +
+        `<div class="ev-who"><a href="/app#/lookup/${ev.payer}">${short(ev.payer)}</a>` +
+        ` <span class="arr">paid</span> <span class="ev-amount">${usdg} USDG</span> <span class="arr">to</span> ` +
+        `<a href="/app#/audit/${ev.agent}">${short(ev.agent)}</a></div>` +
+        `<div class="ev-meta"><a href="https://robinhoodchain.blockscout.com/tx/${ev.tallyTx}" target="_blank" rel="noreferrer">tx ↗</a>` +
+        `<br>block ${ev.blockNumber}</div>`;
+      list.prepend(row);
+      count++;
+      statusEl.textContent = `connected — ${count} receipt${count === 1 ? "" : "s"} shown`;
+    }
+
+    const es = new EventSource("/events");
+    es.addEventListener("tally", (e) => { try { addRow(JSON.parse(e.data)); } catch {} });
+    es.onerror = () => { statusEl.textContent = "reconnecting…"; };
+    es.onopen = () => { statusEl.textContent = "connected — waiting for receipts"; };
+  </script>
+</body>
+</html>

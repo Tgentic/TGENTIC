@@ -619,6 +619,7 @@ describe("gate", function () {
     const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
     const dist = fs.mkdtempSync(path.join(os.tmpdir(), "wd-"));
     fs.writeFileSync(path.join(dist, "mcp.html"), "<!doctype html><title>mcp</title>get_agent_score get_agent_risk");
+    fs.writeFileSync(path.join(dist, "events.html"), "<!doctype html><title>events</title>receipts landing live");
     const server = srv.createServer(ctx, { webDist: dist }).listen(0);
     await new Promise((r) => server.once("listening", r));
     const base = `http://127.0.0.1:${server.address().port}`;
@@ -633,6 +634,14 @@ describe("gate", function () {
       const sse = await fetch(`${base}/mcp`, { headers: { accept: "text/event-stream" } });
       expect(sse.headers.get("content-type")).to.include("text/event-stream");
       expect(await sse.text()).to.include("tgentic-mcp");
+      // /events: browsers get the viewer page, SSE clients the stream
+      const evPage = await fetch(`${base}/events`, { headers: { accept: "text/html,application/xhtml+xml" } });
+      expect(evPage.headers.get("content-type")).to.include("text/html");
+      expect(await evPage.text()).to.include("receipts landing live");
+      const evSse = new AbortController();
+      const evRes = await fetch(`${base}/events`, { headers: { accept: "text/event-stream" }, signal: evSse.signal });
+      expect(evRes.headers.get("content-type")).to.include("text/event-stream");
+      evSse.abort(); // the stream stays open by design — close it, don't read it to end
     } finally {
       server.close();
     }

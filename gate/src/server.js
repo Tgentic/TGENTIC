@@ -317,6 +317,9 @@ export function createServer(ctx, { allowedOrigin = "*", webDist = "", ratePerMi
     // Step 7: live reputation stream — Tallied events as they land on chain,
     // replaying the recent few on connect. One shared poller per process.
     if (req.method === "GET" && pathname === "/events") {
+      // Browsers get the live viewer page; SSE clients get the stream.
+      if (webDist && req.headers.accept?.includes("text/html") && !req.headers.accept?.includes("text/event-stream"))
+        return serveStatic(webDist, "/events", res);
       if (!req.headers.accept?.includes("text/event-stream"))
         return send(200, { name: "tgentic-events", hint: "GET with Accept: text/event-stream — live Tallied events, recent few replayed on connect." });
       tailer ??= makeTailer(ctx);
