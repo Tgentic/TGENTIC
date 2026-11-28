@@ -201,3 +201,17 @@ td a { color: var(--blue-text); }
 .b-id { display: flex; flex-direction: column; min-width: 0; }
 .b-name { font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .b-addr { font-size: .66rem; color: var(--mute); }
+
+/* Signed identities list — fewer, simpler columns than the scored board */
+.man-row { grid-template-columns: 44px 32px minmax(140px, 1fr) auto auto 56px 110px; }
+.man-row .b-meta:last-child { text-align: right; }
+.demo-chip { color: var(--mute); border-color: var(--mute); }
+@media (max-width: 900px) {
+  .man-row { grid-template-columns: 40px 32px minmax(0, 1fr) auto auto; }
+  .man-row .b-meta { display: none; }
+}
+@media (max-width: 560px) {
+  .man-row { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .man-row .rank { display: none; }
+  .man-row .b-meta { display: none; }
+}

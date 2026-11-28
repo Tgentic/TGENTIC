@@ -305,6 +305,33 @@ function Board() {
                 {api.explorer && <a className="dir-ext" href={`${api.explorer}/address/${r.a}`} target="_blank" rel="noreferrer" title="View on explorer" aria-label={`View ${r.a} on explorer`}>↗</a>}
               </li>
             ))}</ol>
+
+            {mans.size > 0 && (() => {
+              const all = [...mans.values()].sort((x, y) => Number(x.demo) - Number(y.demo) || (x.agentId ?? 1e9) - (y.agentId ?? 1e9) || x.name.localeCompare(y.name));
+              const demos = all.filter((m) => m.demo).length;
+              const needleM = q.trim().toLowerCase();
+              const shownM = needleM ? all.filter((m) => m.name.toLowerCase().includes(needleM) || m.agent.toLowerCase().includes(needleM)) : all;
+              return (
+                <section className="block" aria-labelledby="h-mans" style={{ marginTop: "28px" }}>
+                  <h2 id="h-mans">Signed identities</h2>
+                  <p className="hint"><strong>{all.length}</strong> verified manifests — {all.length - demos} operator{all.length - demos === 1 ? "" : "s"}, {demos} labeled demo. Identity is signed metadata; the ranked board above is earned receipts.</p>
+                  {shownM.length === 0 && <p className="state">No identity matches “{q}”.</p>}
+                  <ol className="board">{shownM.map((m, i) => (
+                    <li key={m.agent} style={{ "--i": i }}>
+                      <a className="board-row man-row" href={`#/lookup/${m.agent}`}>
+                        <span className="rank mono">{String(i + 1).padStart(3, "0")}</span>
+                        <Identicon address={m.agent} size={32} />
+                        <span className="b-id"><span className="b-name">{m.name}</span><span className="b-addr mono">{short(m.agent)}</span></span>
+                        {m.agentId != null && <span className="e8-chip mono" title={`ERC-8004 agentId ${m.agentId}`}>8004</span>}
+                        {m.demo && <span className="e8-chip mono demo-chip" title="Labeled sample identity — not a real operator">demo</span>}
+                        <span className="b-meta mono">v{m.version}</span>
+                        <span className="b-meta mono hide-sm">{short(m.manifestHash)}</span>
+                      </a>
+                    </li>
+                  ))}</ol>
+                </section>
+              );
+            })()}
           </>
         );
       })()}
