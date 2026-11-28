@@ -4,6 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { makeClients, policyAbi } from "./core.js";
 import { loadManifestStore } from "./manifest.js";
 import { createServer } from "./server.js";
+import fs from "node:fs";
 
 try { process.loadEnvFile(".env"); } catch {} // optional .env in the gate dir; missing values get a clear error below
 
@@ -66,10 +67,16 @@ const ctx = {
   minConfirmations: Number(env.MIN_CONFIRMATIONS ?? 3),
   detectFromBlock: BigInt(env.DETECT_FROM_BLOCK ?? 122_282_476), // v2 Receipts deploy block
   inflight: new Set(),
-  // Step 6: verified manifests loaded once from MANIFESTS_DIR (repo manifests/
-  // by default). resolveManifests() drops everything after a gap or an
+  // Step 6: verified manifests loaded once. Candidates cover both layouts:
+  // repo-root manifests/ (dev) and gate/manifests/ (Railway deploys gate/ as
+  // the service root). resolveManifests() drops everything after a gap or an
   // unauthorized signer, so what lands here is the trusted tip only.
-  manifests: await loadManifestStore(env.MANIFESTS_DIR ?? new URL("../../manifests/", import.meta.url).pathname),
+  manifests: await loadManifestStore(
+    [env.MANIFESTS_DIR,
+     new URL("../manifests/", import.meta.url).pathname,   // gate/manifests
+     new URL("../../manifests/", import.meta.url).pathname] // repo manifests/
+      .find((d) => d && fs.existsSync(d))
+  ),
 };
 
 const port = Number(env.PORT ?? 8788); // 8787 left reserved

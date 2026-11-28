@@ -143,4 +143,12 @@ describe("agent manifest", function () {
       expect(mf.manifestHash(a)).to.equal(mf.manifestHash({ ...a, signature: "0x00" })); // sig-independent
     });
   });
+
+  it("gate/manifests mirrors repo manifests/ — the deployed copy must not drift", () => {
+    const fs = require("node:fs"), path = require("node:path");
+    const read = (d) => Object.fromEntries(
+      fs.readdirSync(d).filter((f) => f.endsWith(".json")).sort()
+        .map((f) => [f, fs.readFileSync(path.join(d, f), "utf8")]));
+    expect(read("gate/manifests")).to.deep.equal(read("manifests"));
+  });
 });
