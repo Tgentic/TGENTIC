@@ -17,7 +17,7 @@ export async function fetchManifestMap() {
     const r = await fetch("/manifests");
     if (!r.ok) return new Map();
     const { manifests } = await r.json();
-    return new Map((manifests ?? []).map((m) => [m.agent.toLowerCase(), m]));
+    return new Map((manifests ?? []).filter((m) => typeof m?.agent === "string" && m.agent.startsWith("0x")).map((m) => [m.agent.toLowerCase(), m]));
   } catch {
     return new Map();
   }

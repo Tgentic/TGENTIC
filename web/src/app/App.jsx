@@ -162,7 +162,7 @@ function Profile({ a }) {
             <div><dt>Signing keys</dt><dd className="mono">{man.signingKeys?.length ?? 0} authorized</dd></div>
           </dl>
           <ul className="sigs">
-            <li><span className="mono mute">manifestHash · EIP-191 verified</span> <a className="mono" href={`https://github.com/Tgentic/TGENTIC/blob/main/manifests/${a.toLowerCase()}.json`} target="_blank" rel="noreferrer">{short(man.manifestHash)} verify ↗</a></li>
+            <li><span className="mono mute">manifestHash · EIP-191 verified</span> <a className="mono" href={`https://github.com/Tgentic/TGENTIC/blob/main/manifests/${a.toLowerCase()}.json`} target="_blank" rel="noreferrer">{man.manifestHash ? short(man.manifestHash) : ""} verify ↗</a></li>
           </ul>
         </section>
       )}
@@ -306,32 +306,53 @@ function Board() {
               </li>
             ))}</ol>
 
-            {mans.size > 0 && (() => {
-              const all = [...mans.values()].sort((x, y) => Number(x.demo) - Number(y.demo) || (x.agentId ?? 1e9) - (y.agentId ?? 1e9) || x.name.localeCompare(y.name));
-              const demos = all.filter((m) => m.demo).length;
-              const needleM = q.trim().toLowerCase();
-              const shownM = needleM ? all.filter((m) => m.name.toLowerCase().includes(needleM) || m.agent.toLowerCase().includes(needleM)) : all;
-              return (
-                <section className="block" aria-labelledby="h-mans" style={{ marginTop: "28px" }}>
-                  <h2 id="h-mans">Signed identities</h2>
-                  <p className="hint"><strong>{all.length}</strong> verified manifests — {all.length - demos} operator{all.length - demos === 1 ? "" : "s"}, {demos} labeled demo. Identity is signed metadata; the ranked board above is earned receipts.</p>
-                  {shownM.length === 0 && <p className="state">No identity matches “{q}”.</p>}
-                  <ol className="board">{shownM.map((m, i) => (
-                    <li key={m.agent} style={{ "--i": i }}>
-                      <a className="board-row man-row" href={`#/lookup/${m.agent}`}>
-                        <span className="rank mono">{String(i + 1).padStart(3, "0")}</span>
-                        <Identicon address={m.agent} size={32} />
-                        <span className="b-id"><span className="b-name">{m.name}</span><span className="b-addr mono">{short(m.agent)}</span></span>
-                        {m.agentId != null && <span className="e8-chip mono" title={`ERC-8004 agentId ${m.agentId}`}>8004</span>}
-                        {m.demo && <span className="e8-chip mono demo-chip" title="Labeled sample identity — not a real operator">demo</span>}
-                        <span className="b-meta mono">v{m.version}</span>
-                        <span className="b-meta mono hide-sm">{short(m.manifestHash)}</span>
-                      </a>
-                    </li>
-                  ))}</ol>
-                </section>
-              );
-            })()}
+          </>
+        );
+      })()}
+    </div>
+  );
+}
+
+/* ------------------------------- Agents (signed identities) ------------------------------- */
+
+function Agents() {
+  const [st, retry] = useLoad(() => fetchManifestMap(), [], POLL_MS);
+  const [q, setQ] = useState("");
+  return (
+    <div className="page">
+      <div className="page-head">
+        <PixelIcon name="verify" size={56} />
+        <div><h1>Signed identities</h1><p className="hint">Every verified agent manifest the gate serves — name, endpoints and authorized keys signed to an address. Identity is signed metadata; earned reputation lives on the <a href="#/directory">directory board</a>.</p></div>
+      </div>
+      {st.s === "loading" && <Loading what="identities" />}
+      {st.s === "error" && <Failed text={st.text} retry={retry} />}
+      {st.s === "done" && (() => {
+        const mans = st.data;
+        if (mans.size === 0) return <p className="state">No signed identities served by this gate yet. Agents publish manifests via <code>tools/create-agent.mjs</code>.</p>;
+        const all = [...mans.values()].sort((x, y) => Number(x.demo) - Number(y.demo) || (x.agentId ?? 1e9) - (y.agentId ?? 1e9) || x.name.localeCompare(y.name));
+        const demos = all.filter((m) => m.demo).length;
+        const needle = q.trim().toLowerCase();
+        const shown = needle ? all.filter((m) => m.name.toLowerCase().includes(needle) || m.agent.toLowerCase().includes(needle)) : all;
+        return (
+          <>
+            <div className="dir-bar">
+              <p className="dir-count"><strong>{all.length}</strong> signed identities <span className="live">live</span> · {all.length - demos} operator{all.length - demos === 1 ? "" : "s"} · {demos} demo-labeled</p>
+              <input className="dir-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name or address…" autoComplete="off" spellCheck="false" aria-label="Filter identities" />
+            </div>
+            {shown.length === 0 && <p className="state">No identity matches “{q}”.</p>}
+            <ol className="board">{shown.map((m, i) => (
+              <li key={m.agent} style={{ "--i": i }}>
+                <a className="board-row man-row" href={`#/lookup/${m.agent}`}>
+                  <span className="rank mono">{String(i + 1).padStart(3, "0")}</span>
+                  <Identicon address={m.agent} size={32} />
+                  <span className="b-id"><span className="b-name">{m.name}</span><span className="b-addr mono">{short(m.agent)}</span></span>
+                  {m.agentId != null && <span className="e8-chip mono" title={`ERC-8004 agentId ${m.agentId}`}>8004</span>}
+                  {m.demo && <span className="e8-chip mono demo-chip" title="Labeled sample identity — not a real operator">demo</span>}
+                  <span className="b-meta mono">v{m.version ?? "?"}</span>
+                  <span className="b-meta mono hide-sm">{m.manifestHash ? short(m.manifestHash) : "—"}</span>
+                </a>
+              </li>
+            ))}</ol>
           </>
         );
       })()}
@@ -513,7 +534,7 @@ export default function App() {
   };
   const privy = HAS_PRIVY ? { ready: p?.ready ?? false, authenticated: !!p?.authenticated, email, logout: () => p?.logout(), login: () => pl?.login() } : null;
   useEffect(() => mountLogoform(document.querySelector(".foot-field"), { mode: "band" }), []);
-  const tabs = [["lookup", "Lookup"], ["directory", "Directory"], ["bond", "Bond"]];
+  const tabs = [["lookup", "Lookup"], ["directory", "Directory"], ["agents", "Agents"], ["bond", "Bond"]];
   return (
     <>
       <header className="nav">
@@ -530,7 +551,7 @@ export default function App() {
         <p className="demo-bar" role="note">Demo data. Sample agents and receipts so you can see the dapp working; none of it is on chain. <a href={location.pathname + location.hash}>Leave demo</a></p>
       )}
       <main className={SHOW_DEMO_LABEL ? "has-demo" : ""}>
-        {name === "board" || name === "directory" ? <Board /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : <Lookup param={param} />}
+        {name === "board" || name === "directory" ? <Board /> : name === "agents" ? <Agents /> : name === "bond" ? <Bond acct={acct} onConnect={connect} /> : <Lookup param={param} />}
       </main>
       <footer className="foot" dangerouslySetInnerHTML={FOOT} />
     </>

@@ -13,7 +13,7 @@ export const SOCIALS = [
 ];
 
 const COLS = [
-  ["Dapp", [["Check a tally", "/app#/lookup"], ["Agent directory", "/app#/directory"], ["Your bond", "/app#/bond"], ["MCP endpoint", "/mcp"]]],
+  ["Dapp", [["Check a tally", "/app#/lookup"], ["Agent directory", "/app#/directory"], ["Signed identities", "/app#/agents"], ["Your bond", "/app#/bond"], ["MCP endpoint", "/mcp"]]],
   ["Protocol", [["Why receipts", "/#why"], ["How a tally is counted", "/#count"], ["Bond", "/#bond"], ["Who reads a tally", "/#readers"], ["Agent identity", "/#identity"], ["Roadmap", "https://github.com/Tgentic/TGENTIC/blob/main/ROADMAP.md"], ["Contributing", "https://github.com/Tgentic/TGENTIC/blob/main/CONTRIBUTING.md"], ["Docs", "https://github.com/Tgentic/TGENTIC/tree/main/docs"]]],
 ];
 
