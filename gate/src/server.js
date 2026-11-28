@@ -35,7 +35,12 @@ function serveStatic(root, url, res) {
   try { if (fs.statSync(serve).isDirectory()) serve = path.join(rootDir, "index.html"); }
   catch { serve = path.join(rootDir, "index.html"); } // ENOENT, EPERM, or a stat race — fall back, never crash
   const type = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".json": "application/json" }[path.extname(serve)] || "application/octet-stream";
-  res.writeHead(200, { "content-type": type, "x-content-type-options": "nosniff", ...SECURITY_HEADERS });
+  // HTML must revalidate every load (deploys swap bundle hashes); hashed
+  // assets under /assets/ are immutable forever.
+  const cache = type === "text/html" ? "no-cache"
+    : clean.includes("/assets/") ? "public, max-age=31536000, immutable"
+    : "no-cache";
+  res.writeHead(200, { "content-type": type, "cache-control": cache, "x-content-type-options": "nosniff", ...SECURITY_HEADERS });
   const stream = fs.createReadStream(serve);
   stream.on("error", () => res.end()); // fd exhaustion or a delete race must not crash the process
   stream.pipe(res);
